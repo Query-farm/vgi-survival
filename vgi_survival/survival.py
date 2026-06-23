@@ -163,9 +163,7 @@ def kaplan_meier(
     ci_upper = np.asarray(ci.iloc[:, 1], dtype=float)
     # event_table is indexed by timeline; "at_risk" is the number entering each
     # time. Reindex onto the survival-function timeline (which includes t=0).
-    at_risk = (
-        kmf.event_table["at_risk"].reindex(timeline).fillna(0.0).to_numpy().astype(np.int64)
-    )
+    at_risk = kmf.event_table["at_risk"].reindex(timeline).fillna(0.0).to_numpy().astype(np.int64)
 
     return {
         "time": timeline.tolist(),
@@ -263,10 +261,7 @@ def logrank_test(
     groups = df[group].to_numpy()
     n_groups = len(pd.unique(groups[pd.notna(groups)]))
     if n_groups < 2:
-        raise SurvivalError(
-            f"logrank_test needs at least two distinct groups in '{group}', "
-            f"found {n_groups}"
-        )
+        raise SurvivalError(f"logrank_test needs at least two distinct groups in '{group}', found {n_groups}")
 
     durations = _numeric(df, duration, role="duration")
     events = _event_indicator(df, event)

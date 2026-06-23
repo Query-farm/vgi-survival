@@ -43,9 +43,7 @@ def test_cox_function_recovers_prio() -> None:
 
 def test_logrank_function() -> None:
     df = load_waltons()
-    out = run_buffering(
-        LogRankTest, _arrow(df), named={"duration": "T", "event": "E", "group": "group"}
-    )
+    out = run_buffering(LogRankTest, _arrow(df), named={"duration": "T", "event": "E", "group": "group"})
     d = out.to_pydict()
     assert d["degrees_freedom"][0] == 1
     assert d["p_value"][0] < 0.001

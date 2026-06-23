@@ -93,9 +93,7 @@ def test_logrank_small_p_for_different_groups() -> None:
 
 def test_logrank_identical_groups_large_p() -> None:
     base = pd.DataFrame({"t": [1, 2, 3, 4, 5, 6], "e": [1, 1, 0, 1, 0, 1]})
-    df = pd.concat(
-        [base.assign(arm="x"), base.assign(arm="y")], ignore_index=True
-    )
+    df = pd.concat([base.assign(arm="x"), base.assign(arm="y")], ignore_index=True)
     out = survival.logrank_test(df, duration="t", event="e", group="arm")
     assert out["p_value"][0] > 0.5  # no difference -> large p
 
