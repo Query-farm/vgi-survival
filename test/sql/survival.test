@@ -1,0 +1,97 @@
+# name: test/sql/survival.test
+# description: Survival analysis table functions (KM, Cox, log-rank, median)
+# group: [vgi_survival]
+
+require-env VGI_SURVIVAL_WORKER
+
+statement ok
+LOAD vgi;
+
+statement ok
+ATTACH 'survival' AS survival (TYPE vgi, LOCATION '${VGI_SURVIVAL_WORKER}');
+
+# A small cohort: duration t, event e (1=event, 0=censored), covariate x, arm.
+statement ok
+CREATE TEMP TABLE cohort AS
+SELECT * FROM (VALUES
+  ( 1.0, 1, 22.0, 'a'),
+  ( 2.0, 1, 35.0, 'a'),
+  ( 3.0, 0, 41.0, 'a'),
+  ( 4.0, 1, 28.0, 'a'),
+  ( 5.0, 1, 55.0, 'a'),
+  ( 6.0, 0, 33.0, 'a'),
+  (10.0, 1, 47.0, 'b'),
+  (12.0, 0, 60.0, 'b'),
+  (14.0, 1, 38.0, 'b'),
+  (16.0, 1, 51.0, 'b'),
+  (18.0, 0, 44.0, 'b'),
+  (20.0, 1, 29.0, 'b')
+) AS t(t, e, x, arm);
+
+# Kaplan-Meier: curve starts at survival 1.0 at the earliest time and is
+# monotonically non-increasing. Check the first two rows.
+query II
+SELECT round(time, 1), round(survival, 4)
+FROM survival.kaplan_meier((SELECT t, e FROM cohort), duration := 't', event := 'e')
+ORDER BY time
+LIMIT 2;
+----
+0.0	1.0
+1.0	0.9167
+
+# at_risk at the first event time equals the full cohort size (12).
+query I
+SELECT at_risk
+FROM survival.kaplan_meier((SELECT t, e FROM cohort), duration := 't', event := 'e')
+ORDER BY time
+LIMIT 1;
+----
+12
+
+# Survival is monotonically non-increasing: no row's survival exceeds the prior.
+query I
+SELECT count(*)
+FROM (
+  SELECT survival, lag(survival) OVER (ORDER BY time) AS prev
+  FROM survival.kaplan_meier((SELECT t, e FROM cohort), duration := 't', event := 'e')
+)
+WHERE prev IS NOT NULL AND survival > prev + 1e-9;
+----
+0
+
+# Cox: covariate x (the 'a'/'b' split) shifts the hazard. One row for the single
+# covariate; hazard_ratio is finite and the row is labelled 'x'.
+query I
+SELECT covariate
+FROM survival.cox_hazard_ratios((SELECT t, e, x FROM cohort), duration := 't', event := 'e');
+----
+x
+
+query I
+SELECT isfinite(hazard_ratio) AND hazard_ratio > 0
+FROM survival.cox_hazard_ratios((SELECT t, e, x FROM cohort), duration := 't', event := 'e');
+----
+true
+
+# Log-rank: two clearly separated arms -> one degree of freedom, small p-value.
+query II
+SELECT degrees_freedom, p_value < 0.05
+FROM survival.logrank_test((SELECT t, e, arm FROM cohort), duration := 't', event := 'e', "group" := 'arm');
+----
+1	true
+
+# Median survival is a single positive row.
+query I
+SELECT median_survival > 0
+FROM survival.median_survival((SELECT t, e FROM cohort), duration := 't', event := 'e');
+----
+true
+
+# Missing column -> clear error, never a crash.
+statement error
+SELECT * FROM survival.kaplan_meier((SELECT t, e FROM cohort), duration := 'nope', event := 'e');
+----
+missing required column
+
+statement ok
+DETACH survival;
