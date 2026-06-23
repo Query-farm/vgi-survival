@@ -4,7 +4,9 @@
 
 <p align="center"><em>A <a href="https://query.farm">Query.Farm</a> VGI worker for DuckDB.</em></p>
 
-# vgi-survival
+# Survival Analysis — Kaplan-Meier, Cox PH & Log-Rank in DuckDB
+
+> **vgi-survival** · a [Query.Farm](https://query.farm) VGI worker · powered by lifelines
 
 A [VGI](https://query.farm) worker that brings **survival / time-to-event
 analysis** to DuckDB/SQL: Kaplan-Meier survival curves, Cox
