@@ -33,17 +33,35 @@ class DrainState(ArrowSerializableDataclass):
 
 
 def serialize_batch(batch: pa.RecordBatch) -> bytes:
-    """Serialize one RecordBatch to a self-describing Arrow IPC stream."""
+    """Serialize one RecordBatch to a self-describing Arrow IPC stream.
+
+    Args:
+        batch: The record batch to serialize.
+
+    Returns:
+        The Arrow IPC stream bytes for the batch.
+    """
     sink = pa.BufferOutputStream()
-    with pa.ipc.new_stream(sink, batch.schema) as writer:
+    # pyarrow.ipc.* is untyped (ships py.typed but no ipc stub).
+    with pa.ipc.new_stream(sink, batch.schema) as writer:  # type: ignore[no-untyped-call]
         writer.write_batch(batch)
-    return sink.getvalue().to_pybytes()
+    result: bytes = sink.getvalue().to_pybytes()
+    return result
 
 
 def deserialize_batches(value: bytes) -> list[pa.RecordBatch]:
-    """Inverse of :func:`serialize_batch` for one stored blob."""
-    reader = pa.ipc.open_stream(pa.BufferReader(value))
-    return reader.read_all().to_batches()
+    """Reassemble the record batches from one serialized blob.
+
+    Args:
+        value: Bytes produced by :func:`serialize_batch`.
+
+    Returns:
+        The record batches contained in the stream.
+    """
+    # pyarrow.ipc.* is untyped (ships py.typed but no ipc stub).
+    reader = pa.ipc.open_stream(pa.BufferReader(value))  # type: ignore[no-untyped-call]
+    batches: list[pa.RecordBatch] = reader.read_all().to_batches()
+    return batches
 
 
 def input_schema_of(params: Any) -> pa.Schema:
@@ -63,12 +81,30 @@ class SinkBuffer[TArgs, TState](TableBufferingFunction[TArgs, TState]):
 
     @classmethod
     def process(cls, batch: pa.RecordBatch, params: TableBufferingParams[TArgs]) -> bytes:
+        """Sink one input batch under the single shared key.
+
+        Args:
+            batch: The input record batch to buffer.
+            params: The table-buffering invocation parameters.
+
+        Returns:
+            The execution id used as this sink's state key.
+        """
         if batch.num_rows:
             params.storage.state_append(_DATA_KEY, b"", serialize_batch(batch))
         return params.execution_id
 
     @classmethod
     def combine(cls, state_ids: list[bytes], params: TableBufferingParams[TArgs]) -> list[bytes]:
+        """Collapse every sink state into the single finalize bucket.
+
+        Args:
+            state_ids: The per-sink state ids produced by :meth:`process`.
+            params: The table-buffering invocation parameters.
+
+        Returns:
+            A single-element list with the one finalize key.
+        """
         return [params.execution_id]
 
     @classmethod
@@ -82,6 +118,6 @@ class SinkBuffer[TArgs, TState](TableBufferingFunction[TArgs, TState]):
         batches: list[pa.RecordBatch] = []
         for _sid, value in params.storage.state_log_scan(_DATA_KEY, b""):
             batches.extend(deserialize_batches(value))
-        if not batches:
-            return pa.Table.from_batches([], schema=input_schema).to_pandas()
-        return pa.Table.from_batches(batches, schema=input_schema).to_pandas()
+        table = pa.Table.from_batches(batches, schema=input_schema)
+        frame: pd.DataFrame = table.to_pandas()
+        return frame

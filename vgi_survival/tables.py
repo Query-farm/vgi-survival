@@ -25,8 +25,9 @@ import pyarrow as pa
 from vgi.arguments import Arg, TableInput
 from vgi.invocation import BindResponse
 from vgi.metadata import FunctionExample
-from vgi.table_buffering_function import OutputCollector, TableBufferingParams
+from vgi.table_buffering_function import TableBufferingParams
 from vgi.table_function import BindParams
+from vgi_rpc.rpc import OutputCollector
 
 from . import survival
 from .buffering import DrainState, SinkBuffer
@@ -83,6 +84,8 @@ _MEDIAN_SCHEMA = pa.schema(
 
 @dataclass(slots=True, frozen=True)
 class KaplanMeierArgs:
+    """Arguments for ``kaplan_meier``: the relation plus duration/event roles."""
+
     data: Annotated[TableInput, Arg(0, doc="Relation containing the duration and event columns.")]
     duration: Annotated[str, Arg("duration", default="duration", doc="Time-to-event / follow-up column.")]
     event: Annotated[str, Arg("event", default="event", doc="0/1 event indicator (1 = event occurred).")]
@@ -90,6 +93,8 @@ class KaplanMeierArgs:
 
 @dataclass(slots=True, frozen=True)
 class CoxArgs:
+    """Arguments for ``cox_hazard_ratios``: the relation plus duration/event roles."""
+
     data: Annotated[TableInput, Arg(0, doc="Relation: duration, event, and one+ covariate columns.")]
     duration: Annotated[str, Arg("duration", default="duration", doc="Time-to-event / follow-up column.")]
     event: Annotated[str, Arg("event", default="event", doc="0/1 event indicator (1 = event occurred).")]
@@ -97,6 +102,8 @@ class CoxArgs:
 
 @dataclass(slots=True, frozen=True)
 class LogRankArgs:
+    """Arguments for ``logrank_test``: the relation plus duration/event/group roles."""
+
     data: Annotated[TableInput, Arg(0, doc="Relation containing duration, event, and group columns.")]
     duration: Annotated[str, Arg("duration", default="duration", doc="Time-to-event / follow-up column.")]
     event: Annotated[str, Arg("event", default="event", doc="0/1 event indicator (1 = event occurred).")]
@@ -105,6 +112,8 @@ class LogRankArgs:
 
 @dataclass(slots=True, frozen=True)
 class MedianArgs:
+    """Arguments for ``median_survival``: the relation plus duration/event roles."""
+
     data: Annotated[TableInput, Arg(0, doc="Relation containing the duration and event columns.")]
     duration: Annotated[str, Arg("duration", default="duration", doc="Time-to-event / follow-up column.")]
     event: Annotated[str, Arg("event", default="event", doc="0/1 event indicator (1 = event occurred).")]
@@ -121,6 +130,8 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
     FunctionArguments: ClassVar[type] = KaplanMeierArgs
 
     class Meta:
+        """Catalog metadata for the ``kaplan_meier`` function."""
+
         name = "kaplan_meier"
         description = (
             "Kaplan-Meier survival curve: (time, survival, ci_lower, ci_upper, at_risk). "
@@ -139,12 +150,29 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
 
     @classmethod
     def on_bind(cls, params: BindParams[KaplanMeierArgs]) -> BindResponse:
+        """Declare the output schema at bind time.
+
+        Args:
+            params: The bind invocation parameters.
+
+        Returns:
+            The bind response carrying the output schema.
+        """
         return BindResponse(output_schema=_KM_SCHEMA)
 
     @classmethod
     def initial_finalize_state(
         cls, finalize_state_id: bytes, params: TableBufferingParams[KaplanMeierArgs]
     ) -> DrainState:
+        """Create the per-finalize-stream cursor.
+
+        Args:
+            finalize_state_id: The finalize stream's state id.
+            params: The table-buffering invocation parameters.
+
+        Returns:
+            A fresh ``DrainState`` so finalize emits exactly once.
+        """
         return DrainState()
 
     @classmethod
@@ -155,6 +183,14 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
+        """Run the estimator on the buffered cohort and emit the single result.
+
+        Args:
+            params: The table-buffering invocation parameters.
+            finalize_state_id: The finalize stream's state id.
+            state: The per-stream cursor; ensures a single emit.
+            out: The output collector for result batches.
+        """
         if state.done:
             out.finish()
             return
@@ -171,6 +207,8 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
     FunctionArguments: ClassVar[type] = CoxArgs
 
     class Meta:
+        """Catalog metadata for the ``cox_hazard_ratios`` function."""
+
         name = "cox_hazard_ratios"
         description = (
             "Cox proportional-hazards model. Every column besides duration/event is a "
@@ -179,22 +217,34 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
         categories = ["survival", "regression"]
         examples = [
             FunctionExample(
-                sql=(
-                    "SELECT * FROM survival.cox_hazard_ratios((SELECT * FROM cohort), "
-                    "duration := 't', event := 'e')"
-                ),
+                sql=("SELECT * FROM survival.cox_hazard_ratios((SELECT * FROM cohort), duration := 't', event := 'e')"),
                 description="Cox hazard ratios for every covariate column",
             )
         ]
 
     @classmethod
     def on_bind(cls, params: BindParams[CoxArgs]) -> BindResponse:
+        """Declare the output schema at bind time.
+
+        Args:
+            params: The bind invocation parameters.
+
+        Returns:
+            The bind response carrying the output schema.
+        """
         return BindResponse(output_schema=_COX_SCHEMA)
 
     @classmethod
-    def initial_finalize_state(
-        cls, finalize_state_id: bytes, params: TableBufferingParams[CoxArgs]
-    ) -> DrainState:
+    def initial_finalize_state(cls, finalize_state_id: bytes, params: TableBufferingParams[CoxArgs]) -> DrainState:
+        """Create the per-finalize-stream cursor.
+
+        Args:
+            finalize_state_id: The finalize stream's state id.
+            params: The table-buffering invocation parameters.
+
+        Returns:
+            A fresh ``DrainState`` so finalize emits exactly once.
+        """
         return DrainState()
 
     @classmethod
@@ -205,6 +255,14 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
+        """Run the estimator on the buffered cohort and emit the single result.
+
+        Args:
+            params: The table-buffering invocation parameters.
+            finalize_state_id: The finalize stream's state id.
+            state: The per-stream cursor; ensures a single emit.
+            out: The output collector for result batches.
+        """
         if state.done:
             out.finish()
             return
@@ -221,6 +279,8 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
     FunctionArguments: ClassVar[type] = LogRankArgs
 
     class Meta:
+        """Catalog metadata for the ``logrank_test`` function."""
+
         name = "logrank_test"
         description = (
             "Log-rank test comparing survival across the group column; emits one row "
@@ -239,12 +299,27 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
 
     @classmethod
     def on_bind(cls, params: BindParams[LogRankArgs]) -> BindResponse:
+        """Declare the output schema at bind time.
+
+        Args:
+            params: The bind invocation parameters.
+
+        Returns:
+            The bind response carrying the output schema.
+        """
         return BindResponse(output_schema=_LOGRANK_SCHEMA)
 
     @classmethod
-    def initial_finalize_state(
-        cls, finalize_state_id: bytes, params: TableBufferingParams[LogRankArgs]
-    ) -> DrainState:
+    def initial_finalize_state(cls, finalize_state_id: bytes, params: TableBufferingParams[LogRankArgs]) -> DrainState:
+        """Create the per-finalize-stream cursor.
+
+        Args:
+            finalize_state_id: The finalize stream's state id.
+            params: The table-buffering invocation parameters.
+
+        Returns:
+            A fresh ``DrainState`` so finalize emits exactly once.
+        """
         return DrainState()
 
     @classmethod
@@ -255,6 +330,14 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
+        """Run the estimator on the buffered cohort and emit the single result.
+
+        Args:
+            params: The table-buffering invocation parameters.
+            finalize_state_id: The finalize stream's state id.
+            state: The per-stream cursor; ensures a single emit.
+            out: The output collector for result batches.
+        """
         if state.done:
             out.finish()
             return
@@ -271,17 +354,17 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
     FunctionArguments: ClassVar[type] = MedianArgs
 
     class Meta:
+        """Catalog metadata for the ``median_survival`` function."""
+
         name = "median_survival"
         description = (
-            "Median survival time (Kaplan-Meier S(t)=0.5) as a single row; inf if the "
-            "curve never reaches 0.5."
+            "Median survival time (Kaplan-Meier S(t)=0.5) as a single row; inf if the curve never reaches 0.5."
         )
         categories = ["survival", "estimator"]
         examples = [
             FunctionExample(
                 sql=(
-                    "SELECT * FROM survival.median_survival((SELECT t, e FROM cohort), "
-                    "duration := 't', event := 'e')"
+                    "SELECT * FROM survival.median_survival((SELECT t, e FROM cohort), duration := 't', event := 'e')"
                 ),
                 description="Median survival time",
             )
@@ -289,12 +372,27 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
 
     @classmethod
     def on_bind(cls, params: BindParams[MedianArgs]) -> BindResponse:
+        """Declare the output schema at bind time.
+
+        Args:
+            params: The bind invocation parameters.
+
+        Returns:
+            The bind response carrying the output schema.
+        """
         return BindResponse(output_schema=_MEDIAN_SCHEMA)
 
     @classmethod
-    def initial_finalize_state(
-        cls, finalize_state_id: bytes, params: TableBufferingParams[MedianArgs]
-    ) -> DrainState:
+    def initial_finalize_state(cls, finalize_state_id: bytes, params: TableBufferingParams[MedianArgs]) -> DrainState:
+        """Create the per-finalize-stream cursor.
+
+        Args:
+            finalize_state_id: The finalize stream's state id.
+            params: The table-buffering invocation parameters.
+
+        Returns:
+            A fresh ``DrainState`` so finalize emits exactly once.
+        """
         return DrainState()
 
     @classmethod
@@ -305,6 +403,14 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
+        """Run the estimator on the buffered cohort and emit the single result.
+
+        Args:
+            params: The table-buffering invocation parameters.
+            finalize_state_id: The finalize stream's state id.
+            state: The per-stream cursor; ensures a single emit.
+            out: The output collector for result batches.
+        """
         if state.done:
             out.finish()
             return

@@ -23,6 +23,8 @@ lifelines is MIT-licensed; numpy/pandas are BSD-licensed.
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
@@ -64,8 +66,7 @@ def _require_columns(df: pd.DataFrame, required: dict[str, str]) -> None:
     if missing:
         detail = ", ".join(f"{role} := '{col}'" for role, col in missing.items())
         raise SurvivalError(
-            f"missing required column(s): {detail}; "
-            f"input relation has columns: {', '.join(map(str, df.columns))}"
+            f"missing required column(s): {detail}; input relation has columns: {', '.join(map(str, df.columns))}"
         )
 
 
@@ -87,8 +88,7 @@ def _numeric(df: pd.DataFrame, column: str, *, role: str) -> np.ndarray:
     coerced = pd.to_numeric(series, errors="coerce")
     if coerced.isna().any() and not series.isna().any():
         raise SurvivalError(
-            f"{role} column '{column}' must be numeric, but contains "
-            f"non-numeric values (dtype {series.dtype})"
+            f"{role} column '{column}' must be numeric, but contains non-numeric values (dtype {series.dtype})"
         )
     return np.asarray(coerced, dtype=float)
 
@@ -111,14 +111,14 @@ def _event_indicator(df: pd.DataFrame, column: str) -> np.ndarray:
     """
     series = df[column]
     if series.dtype == bool:
-        return series.to_numpy().astype(int)
+        return np.asarray(series.to_numpy(), dtype=int)
     coerced = pd.to_numeric(series, errors="coerce")
     if coerced.isna().any():
         raise SurvivalError(
             f"event column '{column}' must be 0/1 or boolean, but contains "
             f"values that are neither (dtype {series.dtype})"
         )
-    return (np.asarray(coerced, dtype=float) != 0).astype(int)
+    return np.asarray(np.asarray(coerced, dtype=float) != 0, dtype=int)
 
 
 def kaplan_meier(
@@ -127,7 +127,7 @@ def kaplan_meier(
     duration: str,
     event: str,
     alpha: float = 0.05,
-) -> dict[str, list]:
+) -> dict[str, list[Any]]:
     """Kaplan-Meier survival curve with confidence bands and at-risk counts.
 
     Args:
@@ -180,7 +180,7 @@ def cox_hazard_ratios(
     duration: str,
     event: str,
     alpha: float = 0.05,
-) -> dict[str, list]:
+) -> dict[str, list[Any]]:
     """Fit a Cox proportional-hazards model; one row per covariate.
 
     Every column other than ``duration`` and ``event`` is used as a covariate.
@@ -238,7 +238,7 @@ def logrank_test(
     duration: str,
     event: str,
     group: str,
-) -> dict[str, list]:
+) -> dict[str, list[Any]]:
     """Multivariate log-rank test comparing survival across ``group``.
 
     Args:
@@ -279,7 +279,7 @@ def median_survival(
     *,
     duration: str,
     event: str,
-) -> dict[str, list]:
+) -> dict[str, list[Any]]:
     """Median survival time (Kaplan-Meier): time at which survival drops to 0.5.
 
     Args:
