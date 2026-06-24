@@ -138,6 +138,18 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
             "event=1/true means the event occurred; 0/false means censored."
         )
         categories = ["survival", "estimator"]
+        tags = {
+            "vgi.columns_md": (
+                "One row per distinct observed follow-up time, ordered by `time`.\n\n"
+                "| column | type | description |\n"
+                "| --- | --- | --- |\n"
+                "| `time` | DOUBLE | Distinct observed follow-up time. |\n"
+                "| `survival` | DOUBLE | Kaplan-Meier survival probability S(t) at this time. |\n"
+                "| `ci_lower` | DOUBLE | Lower bound of the survival confidence interval. |\n"
+                "| `ci_upper` | DOUBLE | Upper bound of the survival confidence interval. |\n"
+                "| `at_risk` | BIGINT | Number of subjects still at risk entering this time. |"
+            ),
+        }
         examples = [
             FunctionExample(
                 sql=(
@@ -214,6 +226,19 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
             "covariate; emits (covariate, coef, hazard_ratio, ci_lower, ci_upper, p_value)."
         )
         categories = ["survival", "regression"]
+        tags = {
+            "vgi.columns_md": (
+                "One row per covariate (every input column besides duration/event).\n\n"
+                "| column | type | description |\n"
+                "| --- | --- | --- |\n"
+                "| `covariate` | VARCHAR | Covariate (input column) name. |\n"
+                "| `coef` | DOUBLE | Fitted log-hazard coefficient (beta). |\n"
+                "| `hazard_ratio` | DOUBLE | Hazard ratio exp(beta); >1 raises hazard, <1 lowers it. |\n"
+                "| `ci_lower` | DOUBLE | Lower bound of the hazard-ratio confidence interval. |\n"
+                "| `ci_upper` | DOUBLE | Upper bound of the hazard-ratio confidence interval. |\n"
+                "| `p_value` | DOUBLE | Wald-test p-value for the coefficient. |"
+            ),
+        }
         examples = [
             FunctionExample(
                 sql=("SELECT * FROM survival.cox_hazard_ratios((SELECT * FROM cohort), duration := 't', event := 'e')"),
@@ -285,6 +310,16 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
             "(test_statistic, p_value, degrees_freedom)."
         )
         categories = ["survival", "test"]
+        tags = {
+            "vgi.columns_md": (
+                "Exactly one row with the multivariate log-rank result.\n\n"
+                "| column | type | description |\n"
+                "| --- | --- | --- |\n"
+                "| `test_statistic` | DOUBLE | Log-rank chi-squared test statistic. |\n"
+                "| `p_value` | DOUBLE | p-value of the log-rank test. |\n"
+                "| `degrees_freedom` | INTEGER | Degrees of freedom (number of groups minus one). |"
+            ),
+        }
         examples = [
             FunctionExample(
                 sql=(
@@ -358,6 +393,14 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
             "Median survival time (Kaplan-Meier S(t)=0.5) as a single row; inf if the curve never reaches 0.5."
         )
         categories = ["survival", "estimator"]
+        tags = {
+            "vgi.columns_md": (
+                "Exactly one row.\n\n"
+                "| column | type | description |\n"
+                "| --- | --- | --- |\n"
+                "| `median_survival` | DOUBLE | Median survival time (where S(t)=0.5); `inf` if never reached. |"
+            ),
+        }
         examples = [
             FunctionExample(
                 sql=(

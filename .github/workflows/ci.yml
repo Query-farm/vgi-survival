@@ -61,6 +61,30 @@ jobs:
       - name: Docstring lint (pydoclint)
         run: uvx pydoclint --config pyproject.toml vgi_survival/ survival_worker.py
 
+  metadata-quality:
+    name: Metadata quality (vgi-lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.2.0
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install the worker (from the lockfile, with the http extra)
+        # Mirror the integration build so `uv run survival_worker.py` resolves
+        # the worker's deps offline; the vgi-lint action then boots it and
+        # inspects its catalog metadata.
+        run: uv sync --frozen --python 3.13 --extra http
+
+      - name: vgi-lint
+        uses: Query-farm/vgi-lint-check@v1
+        with:
+          location: "uv run --python 3.13 survival_worker.py"
+          fail-on: info
+
   # Resolve the latest published haybarn release once, so the whole matrix tests
   # the same version (and we never hardcode/pin it).
   resolve-haybarn:
