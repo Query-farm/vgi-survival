@@ -33,6 +33,9 @@ from . import survival
 from .buffering import DrainState, SinkBuffer
 from .schema_utils import field as sfield
 
+# Canonical GitHub blob URL for this implementing source file (pinned to main).
+_SOURCE_URL = "https://github.com/Query-farm/vgi-survival/blob/main/vgi_survival/tables.py"
+
 # ---------------------------------------------------------------------------
 # Output schemas
 # ---------------------------------------------------------------------------
@@ -139,7 +142,40 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
         )
         categories = ["survival", "estimator"]
         tags = {
-            "vgi.columns_md": (
+            "vgi.title": "Kaplan-Meier Survival Curve",
+            "vgi.keywords": (
+                "kaplan-meier, kaplan meier, survival curve, survival function, S(t), "
+                "confidence interval, at risk, censoring, non-parametric, time-to-event"
+            ),
+            "vgi.source_url": _SOURCE_URL,
+            "vgi.doc_llm": (
+                "Estimate the non-parametric Kaplan-Meier survival function S(t) from a cohort "
+                "relation. Pass the cohort as `(SELECT ...)` and name the `duration` (follow-up time) "
+                "and `event` (0/1 indicator; 1 = event occurred, 0 = right-censored) columns. Returns "
+                "one row per distinct observed time, ordered by time, with the survival probability, a "
+                "confidence interval, and the number of subjects still at risk. Use it to chart how a "
+                "population's survival declines over time — clinical follow-up, customer churn, or "
+                "hardware reliability. The curve starts at 1.0 and is monotonically non-increasing."
+            ),
+            "vgi.doc_md": (
+                "# kaplan_meier\n\n"
+                "Non-parametric **Kaplan-Meier** estimate of the survival function S(t) over a "
+                "buffered cohort relation.\n\n"
+                "## Usage\n\n"
+                "```sql\n"
+                "SELECT * FROM survival.main.kaplan_meier(\n"
+                "  (SELECT t, e FROM cohort), duration := 't', event := 'e'\n"
+                ") ORDER BY time;\n"
+                "```\n\n"
+                "## Returns\n\n"
+                "One row per distinct observed follow-up time (ordered by `time`): the survival "
+                "probability `survival`, its `ci_lower`/`ci_upper` 95% confidence band, and the "
+                "`at_risk` count.\n\n"
+                "## Notes\n\n"
+                "Event coding is `1` = event occurred, `0` = right-censored. The curve begins at 1.0 "
+                "and never increases. The result can be long (one row per distinct time)."
+            ),
+            "vgi.result_columns_md": (
                 "One row per distinct observed follow-up time, ordered by `time`.\n\n"
                 "| column | type | description |\n"
                 "| --- | --- | --- |\n"
@@ -149,11 +185,18 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
                 "| `ci_upper` | DOUBLE | Upper bound of the survival confidence interval. |\n"
                 "| `at_risk` | BIGINT | Number of subjects still at risk entering this time. |"
             ),
+            "vgi.executable_examples": (
+                '[{"description": "Kaplan-Meier survival curve for a small cohort", '
+                '"sql": "SELECT * FROM survival.main.kaplan_meier('
+                "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
+                "duration := 't', event := 'e') ORDER BY time\"}]"
+            ),
         }
         examples = [
             FunctionExample(
                 sql=(
-                    "SELECT * FROM survival.kaplan_meier((SELECT t, e FROM cohort), "
+                    "SELECT * FROM survival.main.kaplan_meier("
+                    "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
                     "duration := 't', event := 'e') ORDER BY time"
                 ),
                 description="Kaplan-Meier survival curve",
@@ -227,7 +270,40 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
         )
         categories = ["survival", "regression"]
         tags = {
-            "vgi.columns_md": (
+            "vgi.title": "Cox Proportional-Hazards Ratios",
+            "vgi.keywords": (
+                "cox, cox regression, proportional hazards, hazard ratio, coxph, coefficient, "
+                "covariate, risk factor, multivariate, p-value, regression, time-to-event"
+            ),
+            "vgi.source_url": _SOURCE_URL,
+            "vgi.doc_llm": (
+                "Fit a Cox proportional-hazards regression to a cohort relation and report one hazard "
+                "ratio per covariate. Pass the cohort as `(SELECT ...)` containing `duration`, `event` "
+                "(0/1; 1 = event occurred), and one or more numeric covariate columns; every column "
+                "that is not the duration or event is treated as a covariate. Returns one row per "
+                "covariate with the fitted log-hazard coefficient, the hazard ratio exp(coef) (>1 "
+                "raises risk, <1 lowers it), a 95% confidence interval, and the Wald p-value. Use it to "
+                "quantify and rank how each factor influences the rate of the event. Select exactly the "
+                "covariate columns you want — do not feed id/string columns."
+            ),
+            "vgi.doc_md": (
+                "# cox_hazard_ratios\n\n"
+                "Fit a **Cox proportional-hazards** model and return per-covariate hazard ratios.\n\n"
+                "## Usage\n\n"
+                "```sql\n"
+                "SELECT * FROM survival.main.cox_hazard_ratios(\n"
+                "  (SELECT t, e, prio FROM cohort), duration := 't', event := 'e'\n"
+                ");\n"
+                "```\n\n"
+                "## Returns\n\n"
+                "One row per covariate: the `coef`, the `hazard_ratio` (`exp(coef)`), its "
+                "`ci_lower`/`ci_upper` band, and the Wald `p_value`.\n\n"
+                "## Notes\n\n"
+                "Every column besides `duration`/`event` becomes a covariate, so `SELECT` only the "
+                "columns you want fitted (non-numeric covariates raise an error). A relation with no "
+                "covariate column raises a clear error."
+            ),
+            "vgi.result_columns_md": (
                 "One row per covariate (every input column besides duration/event).\n\n"
                 "| column | type | description |\n"
                 "| --- | --- | --- |\n"
@@ -241,7 +317,11 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
         }
         examples = [
             FunctionExample(
-                sql=("SELECT * FROM survival.cox_hazard_ratios((SELECT * FROM cohort), duration := 't', event := 'e')"),
+                sql=(
+                    "SELECT * FROM survival.main.cox_hazard_ratios("
+                    "(SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),"
+                    "(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e')"
+                ),
                 description="Cox hazard ratios for every covariate column",
             )
         ]
@@ -311,7 +391,39 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
         )
         categories = ["survival", "test"]
         tags = {
-            "vgi.columns_md": (
+            "vgi.title": "Log-Rank Test Across Groups",
+            "vgi.keywords": (
+                "log-rank, logrank, log rank test, survival comparison, chi-squared, p-value, "
+                "treatment arms, groups, hypothesis test, multivariate, time-to-event"
+            ),
+            "vgi.source_url": _SOURCE_URL,
+            "vgi.doc_llm": (
+                "Run the multivariate log-rank test to ask whether survival differs across two or more "
+                "groups. Pass the cohort as `(SELECT ...)` with `duration`, `event` (0/1), and a "
+                "`group` column, and name those roles. Returns a single row: the chi-squared test "
+                "statistic, the p-value, and the degrees of freedom (number of groups minus one). A "
+                "small p-value (e.g. < 0.05) indicates the survival curves of the groups differ. Use "
+                "it to compare treatment arms, segments, or cohorts. Note the `group` argument collides "
+                "with the SQL `GROUP` keyword, so quote it at the call site as `\"group\" := 'arm'`."
+            ),
+            "vgi.doc_md": (
+                "# logrank_test\n\n"
+                "Multivariate **log-rank test** comparing survival across a grouping column.\n\n"
+                "## Usage\n\n"
+                "```sql\n"
+                "SELECT * FROM survival.main.logrank_test(\n"
+                "  (SELECT t, e, arm FROM cohort),\n"
+                "  duration := 't', event := 'e', \"group\" := 'arm'\n"
+                ");\n"
+                "```\n\n"
+                "## Returns\n\n"
+                "Exactly one row: `test_statistic`, `p_value`, and `degrees_freedom`. A small "
+                "`p_value` means the groups' survival curves differ.\n\n"
+                "## Notes\n\n"
+                "Needs at least two distinct groups. `group` is a SQL keyword, so double-quote it at "
+                "the call site (`\"group\" := 'arm'`). Event coding is `1` = event, `0` = censored."
+            ),
+            "vgi.result_columns_md": (
                 "Exactly one row with the multivariate log-rank result.\n\n"
                 "| column | type | description |\n"
                 "| --- | --- | --- |\n"
@@ -323,8 +435,10 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
         examples = [
             FunctionExample(
                 sql=(
-                    "SELECT * FROM survival.logrank_test((SELECT * FROM cohort), "
-                    "duration := 't', event := 'e', group := 'arm')"
+                    "SELECT * FROM survival.main.logrank_test("
+                    "(SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),"
+                    "(6,1,'b')) AS c(t, e, arm)), "
+                    "duration := 't', event := 'e', \"group\" := 'arm')"
                 ),
                 description="Log-rank test across treatment arms",
             )
@@ -394,7 +508,37 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
         )
         categories = ["survival", "estimator"]
         tags = {
-            "vgi.columns_md": (
+            "vgi.title": "Median Survival Time",
+            "vgi.keywords": (
+                "median survival, median survival time, median, kaplan-meier, S(t)=0.5, half life, "
+                "headline metric, time-to-event, censoring"
+            ),
+            "vgi.source_url": _SOURCE_URL,
+            "vgi.doc_llm": (
+                "Compute the median survival time from a cohort relation: the time at which the "
+                "Kaplan-Meier survival function S(t) first drops to 0.5. Pass the cohort as "
+                "`(SELECT ...)` and name the `duration` and `event` (0/1; 1 = event occurred) columns. "
+                "Returns a single row with one `median_survival` value. When the survival curve never "
+                "reaches 0.5 (e.g. under heavy censoring) the result is `inf`, not NULL. Use it when you "
+                "want a single headline number summarizing a cohort's survival rather than the whole "
+                "curve."
+            ),
+            "vgi.doc_md": (
+                "# median_survival\n\n"
+                "The **median survival time**: where the Kaplan-Meier curve S(t) first reaches 0.5.\n\n"
+                "## Usage\n\n"
+                "```sql\n"
+                "SELECT * FROM survival.main.median_survival(\n"
+                "  (SELECT t, e FROM cohort), duration := 't', event := 'e'\n"
+                ");\n"
+                "```\n\n"
+                "## Returns\n\n"
+                "Exactly one row with the single `median_survival` value.\n\n"
+                "## Notes\n\n"
+                "If S(t) never reaches 0.5 the value is `inf` (median undefined), passed through as a "
+                "float rather than NULL. Event coding is `1` = event, `0` = right-censored."
+            ),
+            "vgi.result_columns_md": (
                 "Exactly one row.\n\n"
                 "| column | type | description |\n"
                 "| --- | --- | --- |\n"
@@ -404,7 +548,9 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
         examples = [
             FunctionExample(
                 sql=(
-                    "SELECT * FROM survival.median_survival((SELECT t, e FROM cohort), duration := 't', event := 'e')"
+                    "SELECT * FROM survival.main.median_survival("
+                    "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
+                    "duration := 't', event := 'e')"
                 ),
                 description="Median survival time",
             )
