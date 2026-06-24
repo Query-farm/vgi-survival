@@ -171,7 +171,7 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
             params: The table-buffering invocation parameters.
 
         Returns:
-            A fresh ``DrainState`` so finalize emits exactly once.
+            A fresh ``DrainState`` cursor (result IPC bytes + offset) for the finalize stream.
         """
         return DrainState()
 
@@ -183,22 +183,21 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
-        """Run the estimator on the buffered cohort and emit the single result.
+        """Compute the estimate once, then stream it in bounded ROWS_PER_TICK slices.
 
         Args:
             params: The table-buffering invocation parameters.
             finalize_state_id: The finalize stream's state id.
-            state: The per-stream cursor; ensures a single emit.
+            state: The per-stream cursor (result IPC bytes + offset).
             out: The output collector for result batches.
         """
-        if state.done:
-            out.finish()
-            return
-        state.done = True
         a = params.args
-        df = cls.buffered_frame(params)
-        result = survival.kaplan_meier(df, duration=a.duration, event=a.event)
-        out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
+        cls.drain_finalize(
+            params,
+            state,
+            out,
+            lambda df: survival.kaplan_meier(df, duration=a.duration, event=a.event),
+        )
 
 
 class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
@@ -243,7 +242,7 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
             params: The table-buffering invocation parameters.
 
         Returns:
-            A fresh ``DrainState`` so finalize emits exactly once.
+            A fresh ``DrainState`` cursor (result IPC bytes + offset) for the finalize stream.
         """
         return DrainState()
 
@@ -255,22 +254,21 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
-        """Run the estimator on the buffered cohort and emit the single result.
+        """Compute the estimate once, then stream it in bounded ROWS_PER_TICK slices.
 
         Args:
             params: The table-buffering invocation parameters.
             finalize_state_id: The finalize stream's state id.
-            state: The per-stream cursor; ensures a single emit.
+            state: The per-stream cursor (result IPC bytes + offset).
             out: The output collector for result batches.
         """
-        if state.done:
-            out.finish()
-            return
-        state.done = True
         a = params.args
-        df = cls.buffered_frame(params)
-        result = survival.cox_hazard_ratios(df, duration=a.duration, event=a.event)
-        out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
+        cls.drain_finalize(
+            params,
+            state,
+            out,
+            lambda df: survival.cox_hazard_ratios(df, duration=a.duration, event=a.event),
+        )
 
 
 class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
@@ -318,7 +316,7 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
             params: The table-buffering invocation parameters.
 
         Returns:
-            A fresh ``DrainState`` so finalize emits exactly once.
+            A fresh ``DrainState`` cursor (result IPC bytes + offset) for the finalize stream.
         """
         return DrainState()
 
@@ -330,22 +328,21 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
-        """Run the estimator on the buffered cohort and emit the single result.
+        """Compute the estimate once, then stream it in bounded ROWS_PER_TICK slices.
 
         Args:
             params: The table-buffering invocation parameters.
             finalize_state_id: The finalize stream's state id.
-            state: The per-stream cursor; ensures a single emit.
+            state: The per-stream cursor (result IPC bytes + offset).
             out: The output collector for result batches.
         """
-        if state.done:
-            out.finish()
-            return
-        state.done = True
         a = params.args
-        df = cls.buffered_frame(params)
-        result = survival.logrank_test(df, duration=a.duration, event=a.event, group=a.group)
-        out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
+        cls.drain_finalize(
+            params,
+            state,
+            out,
+            lambda df: survival.logrank_test(df, duration=a.duration, event=a.event, group=a.group),
+        )
 
 
 class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
@@ -391,7 +388,7 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
             params: The table-buffering invocation parameters.
 
         Returns:
-            A fresh ``DrainState`` so finalize emits exactly once.
+            A fresh ``DrainState`` cursor (result IPC bytes + offset) for the finalize stream.
         """
         return DrainState()
 
@@ -403,22 +400,21 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
-        """Run the estimator on the buffered cohort and emit the single result.
+        """Compute the estimate once, then stream it in bounded ROWS_PER_TICK slices.
 
         Args:
             params: The table-buffering invocation parameters.
             finalize_state_id: The finalize stream's state id.
-            state: The per-stream cursor; ensures a single emit.
+            state: The per-stream cursor (result IPC bytes + offset).
             out: The output collector for result batches.
         """
-        if state.done:
-            out.finish()
-            return
-        state.done = True
         a = params.args
-        df = cls.buffered_frame(params)
-        result = survival.median_survival(df, duration=a.duration, event=a.event)
-        out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
+        cls.drain_finalize(
+            params,
+            state,
+            out,
+            lambda df: survival.median_survival(df, duration=a.duration, event=a.event),
+        )
 
 
 TABLE_FUNCTIONS: list[type] = [KaplanMeier, CoxHazardRatios, LogRankTest, MedianSurvival]

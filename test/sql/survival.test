@@ -93,5 +93,34 @@ SELECT * FROM survival.kaplan_meier((SELECT t, e FROM cohort), duration := 'nope
 ----
 missing required column
 
+# HTTP-continuation paging: a synthetic cohort with 200 DISTINCT event times makes
+# the Kaplan-Meier curve emit ~200 rows -- far past the ROWS_PER_TICK (64) producer
+# batch limit. Over http the result is streamed via the continuation token, so this
+# only terminates if the finalize cursor advances across the limit-1 boundary. The
+# old emit-all + done finalize would loop forever (timeout) on the http leg.
+statement ok
+CREATE TEMP TABLE big_cohort AS
+SELECT (g + 1)::DOUBLE AS t, 1 AS e
+FROM generate_series(0, 199) AS s(g);
+
+# 200 distinct times -> 201 KM rows (a t=0 anchor plus one per distinct time).
+query I
+SELECT count(*)
+FROM survival.kaplan_meier((SELECT t, e FROM big_cohort), duration := 't', event := 'e');
+----
+201
+
+# Ordered head: KM starts at S(t)=1.0 at t=0 and steps down monotonically.
+query II
+SELECT round(time, 1), round(survival, 4)
+FROM survival.kaplan_meier((SELECT t, e FROM big_cohort), duration := 't', event := 'e')
+ORDER BY time
+LIMIT 4;
+----
+0.0	1.0
+1.0	0.995
+2.0	0.99
+3.0	0.985
+
 statement ok
 DETACH survival;

@@ -40,6 +40,8 @@ def run_buffering(
     table: pa.Table,
     *,
     named: dict[str, str] | None = None,
+    serialize_state: bool = False,
+    tick_guard: int = 10_000,
 ) -> pa.Table:
     """Drive a survival buffering function over a whole input ``table``.
 
@@ -47,9 +49,21 @@ def run_buffering(
         func_cls: The ``TableBufferingFunction`` subclass to run.
         table: The input relation (the ``(SELECT ...)`` data) as an Arrow table.
         named: Named string column-role args (e.g. ``{"duration": "t"}``).
+        serialize_state: When ``True``, re-serialize the finalize cursor between
+            every ``finalize`` tick via
+            ``type(state).deserialize_from_bytes(state.serialize_to_bytes())`` --
+            emulating the HTTP continuation round-trip. A position-less
+            (emit-all + ``done``) finalize re-emits from row 0 forever under this
+            mode and overruns ``tick_guard``; the offset cursor advances and
+            terminates.
+        tick_guard: Maximum number of ``finalize`` ticks before raising
+            ``AssertionError`` (guards against an infinite continuation loop).
 
     Returns:
         The emitted result as a single Arrow table (the function's output).
+
+    Raises:
+        AssertionError: If finalize does not terminate within ``tick_guard`` ticks.
     """
     input_schema = table.schema
     args = Arguments(
@@ -100,7 +114,18 @@ def run_buffering(
     for fid in finalize_ids:
         params = make_params()
         state = func_cls.initial_finalize_state(fid, params)
+        ticks = 0
         while not out.finished:
+            if serialize_state:
+                # Emulate the stateless HTTP transport: the cursor is wire-
+                # serialized between ticks and the worker resumes from the bytes.
+                state = type(state).deserialize_from_bytes(state.serialize_to_bytes())
             func_cls.finalize(params, fid, state, out)
+            ticks += 1
+            assert ticks <= tick_guard, (
+                f"finalize did not terminate within {tick_guard} ticks "
+                f"(serialize_state={serialize_state}); the cursor is not advancing "
+                f"across the continuation boundary"
+            )
 
     return pa.Table.from_batches(out.batches, schema=bind_resp.output_schema)

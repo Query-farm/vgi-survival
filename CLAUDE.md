@@ -55,11 +55,30 @@ Survival estimates need **every row** before any output, so every function is a
 - `process(batch)` — sink each input batch to execution-scoped `BoundStorage`.
 - `combine(state_ids)` — collapse to a single finalize key (one bucket).
 - `finalize(...)` — reassemble the full table (`buffered_frame()` → pandas),
-  run the lifelines estimator once, emit one result batch, then `out.finish()`.
+  run the lifelines estimator once into the cursor, then stream the result in
+  bounded `ROWS_PER_TICK`-row slices, `out.finish()` when drained.
 
-`SinkBuffer` in `buffering.py` implements `process`/`combine`/`buffered_frame`;
-each function only writes `on_bind` (its output schema) + `finalize`. A
-`DrainState(done: bool)` cursor makes finalize emit exactly once.
+`SinkBuffer` in `buffering.py` implements `process`/`combine`/`buffered_frame` +
+`drain_finalize` (the compute-once-then-page loop); each function only writes
+`on_bind` (its output schema) + a one-line `finalize` that hands its estimator to
+`drain_finalize`.
+
+**`DrainState` is an HTTP-continuation cursor, NOT a `done` flag.** It carries the
+computed result as IPC bytes (`result_ipc`) plus an integer `offset`. WHY: over
+the stateless **http** transport the framework wire-serializes the finalize state
+between ticks (`serialize_to_bytes`), the client returns it as a continuation
+token, and the worker resumes by deserializing it — emitting at most one producer
+batch per response. A position-less `DrainState(done: bool)` that emitted ALL rows
+in one `out.emit()` restarted from row 0 on every http resume and **looped
+forever** once the result exceeded one batch (Kaplan-Meier emits one row per
+distinct follow-up time — genuinely unbounded). subprocess/unix keep the live
+state in-process and hide the bug; only http (and the serialize-between-ticks unit
+test) expose it. Each tick now emits a bounded `ROWS_PER_TICK` (64) slice from
+`offset` and advances it, so a resumed tick sees the advanced offset and continues
+rather than re-running. `tests/harness.py run_buffering(..., serialize_state=True)`
+re-serializes the cursor between every tick (with a tick guard) to reproduce the
+http round-trip in-process — see `TestCursorSurvivesContinuation` and the
+paging `.test` case (a 200-distinct-time cohort that emits ~201 KM rows).
 
 ## Sharp edges (learned the hard way)
 

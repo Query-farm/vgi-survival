@@ -10,10 +10,17 @@ table and runs the estimator once.
 This module holds the single-bucket sink/combine implementation (``SinkBuffer``)
 plus the Arrow (de)serialization and a ``pandas`` assembly helper, so each
 function only writes its ``finalize`` logic.
+
+The Source phase is resumable: ``finalize`` carries a ``DrainState`` cursor
+(computed result IPC bytes + an integer ``offset``) that wire-serializes through
+the HTTP continuation token, so each tick emits a bounded ``ROWS_PER_TICK`` slice
+and a resumed tick advances rather than restarting from row 0. See
+``DrainState`` for the full HTTP-continuation rationale.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -21,15 +28,74 @@ import pandas as pd
 import pyarrow as pa
 from vgi.table_buffering_function import TableBufferingFunction, TableBufferingParams
 from vgi_rpc import ArrowSerializableDataclass
+from vgi_rpc.rpc import OutputCollector
 
 _DATA_KEY = b"input_batches"
+
+# Rows emitted per finalize tick. Bounded so the cursor (offset) is observable
+# across the HTTP limit-1 continuation boundary; correctness no longer depends on
+# the whole result fitting in one producer batch.
+ROWS_PER_TICK = 64
 
 
 @dataclass(kw_only=True)
 class DrainState(ArrowSerializableDataclass):
-    """Per-finalize-stream cursor: emit the single result batch once, then finish."""
+    """Externalized finalize cursor: result batch IPC bytes + next-row offset.
 
-    done: bool = False
+    WHY A CURSOR: over the stateless HTTP transport the framework round-trips
+    this finalize state through a continuation token -- after each ``finalize``
+    tick it wire-serializes the state, the client returns it, and the worker
+    resumes by deserializing it, emitting at most the producer batch limit (1)
+    per response. A position-less ``done: bool`` flag that emits ALL result rows
+    in one ``out.emit()`` restarts from row 0 on every HTTP resume and loops
+    forever once the result exceeds one producer batch (KaplanMeier emits one row
+    per distinct follow-up time -- genuinely unbounded). subprocess/unix keep the
+    live state in-process and so hide the bug; only http (and the
+    serialize-between-ticks unit test) exposes it.
+
+    Both fields wire-serialize through the continuation token, so a resumed tick
+    sees the advanced ``offset`` and emits the next bounded slice (or finishes) --
+    never re-runs the estimator and never re-emits from row 0.
+
+    ``result_ipc`` is empty until the first tick computes the estimate; ``started``
+    distinguishes "not yet computed" from "computed an empty result".
+    """
+
+    started: bool = False
+    offset: int = 0
+    result_ipc: bytes = b""
+
+
+def result_to_ipc(batch: pa.RecordBatch) -> bytes:
+    """Serialize a computed result batch to Arrow IPC stream bytes for the cursor.
+
+    Args:
+        batch: The materialized result record batch.
+
+    Returns:
+        The Arrow IPC stream bytes carried in ``DrainState.result_ipc``.
+    """
+    sink = pa.BufferOutputStream()
+    # pyarrow.ipc.* is untyped (ships py.typed but no ipc stub).
+    with pa.ipc.new_stream(sink, batch.schema) as writer:  # type: ignore[no-untyped-call]
+        writer.write_batch(batch)
+    result: bytes = sink.getvalue().to_pybytes()
+    return result
+
+
+def ipc_to_table(value: bytes) -> pa.Table:
+    """Reassemble the cursor's result table from its IPC stream bytes.
+
+    Args:
+        value: Bytes produced by :func:`result_to_ipc`.
+
+    Returns:
+        The materialized result as an Arrow table.
+    """
+    # pyarrow.ipc.* is untyped (ships py.typed but no ipc stub).
+    reader = pa.ipc.open_stream(pa.BufferReader(value))  # type: ignore[no-untyped-call]
+    table: pa.Table = reader.read_all()
+    return table
 
 
 def serialize_batch(batch: pa.RecordBatch) -> bytes:
@@ -106,6 +172,48 @@ class SinkBuffer[TArgs, TState](TableBufferingFunction[TArgs, TState]):
             A single-element list with the one finalize key.
         """
         return [params.execution_id]
+
+    @classmethod
+    def drain_finalize(
+        cls,
+        params: TableBufferingParams[TArgs],
+        state: DrainState,
+        out: OutputCollector,
+        compute: Callable[[pd.DataFrame], dict[str, list[Any]]],
+    ) -> None:
+        """Compute the result once, then stream it in bounded ``ROWS_PER_TICK`` slices.
+
+        On the first tick (``not state.started``) this runs the estimator over the
+        buffered cohort, materializes the result batch into ``state.result_ipc``,
+        and resets ``state.offset`` to 0. Every tick then emits at most
+        ``ROWS_PER_TICK`` rows from ``state.offset`` and advances it, calling
+        ``out.finish()`` once the result is drained. Because ``state`` (result IPC
+        bytes + offset) wire-serializes through the HTTP continuation token, a
+        resumed tick sees the advanced offset and continues rather than restarting.
+
+        Args:
+            params: The table-buffering invocation parameters.
+            state: The per-finalize-stream cursor (result IPC bytes + offset).
+            out: The output collector for result batches.
+            compute: Estimator producing a ``dict[str, list]`` from the cohort frame.
+        """
+        if not state.started:
+            df = cls.buffered_frame(params)
+            result = compute(df)
+            batch = pa.RecordBatch.from_pydict(result, schema=params.output_schema)
+            state.result_ipc = result_to_ipc(batch)
+            state.started = True
+            state.offset = 0
+
+        table = ipc_to_table(state.result_ipc)
+        total = table.num_rows
+        if state.offset >= total:
+            out.finish()
+            return
+        end = min(state.offset + ROWS_PER_TICK, total)
+        chunk = table.slice(state.offset, end - state.offset)
+        out.emit(chunk.combine_chunks().to_batches()[0])
+        state.offset = end
 
     @classmethod
     def buffered_frame(cls, params: TableBufferingParams[TArgs]) -> pd.DataFrame:
