@@ -18,6 +18,7 @@ covariate. See ``vgi_survival.survival`` for the math and full conventions.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Annotated, ClassVar
 
@@ -33,8 +34,18 @@ from . import survival
 from .buffering import DrainState, SinkBuffer
 from .schema_utils import field as sfield
 
-# Canonical GitHub blob URL for this implementing source file (pinned to main).
-_SOURCE_URL = "https://github.com/Query-farm/vgi-survival/blob/main/vgi_survival/tables.py"
+
+def _json_keywords(*keywords: str) -> str:
+    """Serialize discovery keywords as a JSON array string for ``vgi.keywords``.
+
+    Args:
+        keywords: The individual keyword/phrase strings.
+
+    Returns:
+        A JSON array (e.g. ``["a","b"]``) as required by the VGI metadata schema.
+    """
+    return json.dumps(list(keywords))
+
 
 # ---------------------------------------------------------------------------
 # Output schemas
@@ -143,11 +154,18 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
         categories = ["survival", "estimator"]
         tags = {
             "vgi.title": "Kaplan-Meier Survival Curve",
-            "vgi.keywords": (
-                "kaplan-meier, kaplan meier, survival curve, survival function, S(t), "
-                "confidence interval, at risk, censoring, non-parametric, time-to-event"
+            "vgi.keywords": _json_keywords(
+                "kaplan-meier",
+                "kaplan meier",
+                "survival curve",
+                "survival function",
+                "S(t)",
+                "confidence interval",
+                "at risk",
+                "censoring",
+                "non-parametric",
+                "time-to-event",
             ),
-            "vgi.source_url": _SOURCE_URL,
             "vgi.doc_llm": (
                 "Estimate the non-parametric Kaplan-Meier survival function S(t) from a cohort "
                 "relation. Pass the cohort as `(SELECT ...)` and name the `duration` (follow-up time) "
@@ -271,11 +289,20 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
         categories = ["survival", "regression"]
         tags = {
             "vgi.title": "Cox Proportional-Hazards Ratios",
-            "vgi.keywords": (
-                "cox, cox regression, proportional hazards, hazard ratio, coxph, coefficient, "
-                "covariate, risk factor, multivariate, p-value, regression, time-to-event"
+            "vgi.keywords": _json_keywords(
+                "cox",
+                "cox regression",
+                "proportional hazards",
+                "hazard ratio",
+                "coxph",
+                "coefficient",
+                "covariate",
+                "risk factor",
+                "multivariate",
+                "p-value",
+                "regression",
+                "time-to-event",
             ),
-            "vgi.source_url": _SOURCE_URL,
             "vgi.doc_llm": (
                 "Fit a Cox proportional-hazards regression to a cohort relation and report one hazard "
                 "ratio per covariate. Pass the cohort as `(SELECT ...)` containing `duration`, `event` "
@@ -392,11 +419,19 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
         categories = ["survival", "test"]
         tags = {
             "vgi.title": "Log-Rank Test Across Groups",
-            "vgi.keywords": (
-                "log-rank, logrank, log rank test, survival comparison, chi-squared, p-value, "
-                "treatment arms, groups, hypothesis test, multivariate, time-to-event"
+            "vgi.keywords": _json_keywords(
+                "log-rank",
+                "logrank",
+                "log rank test",
+                "survival comparison",
+                "chi-squared",
+                "p-value",
+                "treatment arms",
+                "groups",
+                "hypothesis test",
+                "multivariate",
+                "time-to-event",
             ),
-            "vgi.source_url": _SOURCE_URL,
             "vgi.doc_llm": (
                 "Run the multivariate log-rank test to ask whether survival differs across two or more "
                 "groups. Pass the cohort as `(SELECT ...)` with `duration`, `event` (0/1), and a "
@@ -509,11 +544,17 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
         categories = ["survival", "estimator"]
         tags = {
             "vgi.title": "Median Survival Time",
-            "vgi.keywords": (
-                "median survival, median survival time, median, kaplan-meier, S(t)=0.5, half life, "
-                "headline metric, time-to-event, censoring"
+            "vgi.keywords": _json_keywords(
+                "median survival",
+                "median survival time",
+                "median",
+                "kaplan-meier",
+                "S(t)=0.5",
+                "half life",
+                "headline metric",
+                "time-to-event",
+                "censoring",
             ),
-            "vgi.source_url": _SOURCE_URL,
             "vgi.doc_llm": (
                 "Compute the median survival time from a cohort relation: the time at which the "
                 "Kaplan-Meier survival function S(t) first drops to 0.5. Pass the cohort as "

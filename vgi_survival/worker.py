@@ -11,6 +11,7 @@ users get the ``vgi-survival`` console script, which calls ``main`` here.
 
 from __future__ import annotations
 
+import json
 import sys
 
 from vgi import Worker
@@ -84,7 +85,39 @@ _SCHEMA_EXAMPLE_QUERIES = (
     "duration := 't', event := 'e');"
 )
 
-_SCHEMA_SOURCE_URL = "https://github.com/Query-farm/vgi-survival/blob/main/vgi_survival/tables.py"
+_CATALOG_KEYWORDS = json.dumps(
+    [
+        "survival analysis",
+        "time-to-event",
+        "kaplan-meier",
+        "cox",
+        "proportional hazards",
+        "hazard ratio",
+        "log-rank",
+        "median survival",
+        "censoring",
+        "lifelines",
+        "churn",
+        "reliability",
+        "clinical trial",
+    ]
+)
+
+_SCHEMA_KEYWORDS = json.dumps(
+    [
+        "survival",
+        "time-to-event",
+        "kaplan_meier",
+        "cox_hazard_ratios",
+        "logrank_test",
+        "median_survival",
+        "hazard ratio",
+        "censoring",
+        "lifelines",
+        "duration",
+        "event",
+    ]
+)
 
 _SURVIVAL_CATALOG = Catalog(
     name="survival",
@@ -93,10 +126,7 @@ _SURVIVAL_CATALOG = Catalog(
     source_url="https://github.com/Query-farm/vgi-survival",
     tags={
         "vgi.title": "Survival & Time-to-Event Analysis",
-        "vgi.keywords": (
-            "survival analysis, time-to-event, kaplan-meier, cox, proportional hazards, hazard ratio, "
-            "log-rank, median survival, censoring, lifelines, churn, reliability, clinical trial"
-        ),
+        "vgi.keywords": _CATALOG_KEYWORDS,
         "vgi.doc_llm": _CATALOG_DOC_LLM,
         "vgi.doc_md": _CATALOG_DOC_MD,
         "vgi.author": "Query.Farm",
@@ -111,15 +141,11 @@ _SURVIVAL_CATALOG = Catalog(
             comment="Survival / time-to-event analysis (Kaplan-Meier, Cox PH, log-rank) for SQL",
             tags={
                 "vgi.title": "Survival Analysis Functions",
-                "vgi.keywords": (
-                    "survival, time-to-event, kaplan_meier, cox_hazard_ratios, logrank_test, "
-                    "median_survival, hazard ratio, censoring, lifelines, duration, event"
-                ),
+                "vgi.keywords": _SCHEMA_KEYWORDS,
                 # VGI123 classifying tags use BARE keys (not vgi.-namespaced).
                 "domain": "statistics",
                 "category": "survival-analysis",
                 "topic": "time-to-event",
-                "vgi.source_url": _SCHEMA_SOURCE_URL,
                 "vgi.doc_llm": _SCHEMA_DOC_LLM,
                 "vgi.doc_md": _SCHEMA_DOC_MD,
                 "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
