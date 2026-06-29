@@ -39,7 +39,7 @@ def _json_keywords(*keywords: str) -> str:
     """Serialize discovery keywords as a JSON array string for ``vgi.keywords``.
 
     Args:
-        keywords: The individual keyword/phrase strings.
+        *keywords: The individual keyword/phrase strings.
 
     Returns:
         A JSON array (e.g. ``["a","b"]``) as required by the VGI metadata schema.
