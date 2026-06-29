@@ -32,6 +32,7 @@ _CATALOG_DOC_LLM = (
 
 _CATALOG_DOC_MD = (
     "# Survival & Time-to-Event Analysis in SQL\n\n"
+    "![lifelines logo](https://i.imgur.com/EOowdSD.png)\n\n"
     "**Run Kaplan-Meier survival curves, Cox proportional-hazards regression, and the log-rank test "
     "directly in DuckDB SQL** — no Python notebook, no data export, no glue code. The `survival` catalog "
     "brings rigorous time-to-event statistics to your data warehouse over Apache Arrow.\n\n"
