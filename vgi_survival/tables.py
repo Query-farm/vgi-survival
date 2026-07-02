@@ -153,6 +153,7 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
         )
         categories = ["survival", "estimator"]
         tags = {
+            "vgi.category": "estimation",
             "vgi.title": "Kaplan-Meier Survival Curve",
             "vgi.keywords": _json_keywords(
                 "kaplan-meier",
@@ -288,6 +289,7 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
         )
         categories = ["survival", "regression"]
         tags = {
+            "vgi.category": "regression",
             "vgi.title": "Cox Proportional-Hazards Ratios",
             "vgi.keywords": _json_keywords(
                 "cox",
@@ -418,6 +420,7 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
         )
         categories = ["survival", "test"]
         tags = {
+            "vgi.category": "comparison",
             "vgi.title": "Log-Rank Test Across Groups",
             "vgi.keywords": _json_keywords(
                 "log-rank",
@@ -543,6 +546,7 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
         )
         categories = ["survival", "estimator"]
         tags = {
+            "vgi.category": "estimation",
             "vgi.title": "Median Survival Time",
             "vgi.keywords": _json_keywords(
                 "median survival",
