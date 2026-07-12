@@ -15,7 +15,7 @@ import json
 import sys
 
 from vgi import Worker
-from vgi.catalog import Catalog, Schema
+from vgi.catalog import Catalog, Schema, View
 
 from vgi_survival.tables import TABLE_FUNCTIONS
 
@@ -86,13 +86,9 @@ _SCHEMA_DOC_MD = (
     "categories. List the schema (or its categories) to discover the available functions and their "
     "per-argument docs.\n\n"
     "### Usage\n\n"
-    "Pass your cohort as a `(SELECT ...)` subquery and name the role columns — the follow-up `duration` "
-    "and the 0/1 `event` indicator (plus a grouping column for comparisons):\n\n"
-    "```sql\n"
-    "SELECT * FROM survival.main.kaplan_meier(\n"
-    "  (SELECT t, e FROM cohort), duration := 't', event := 'e'\n"
-    ") ORDER BY time;\n"
-    "```\n\n"
+    "Pass your cohort as a parenthesised subquery and name the role columns — the follow-up "
+    "`duration` and the 0/1 `event` indicator, plus a grouping column for the comparison test. "
+    "Each estimator ships a ready-to-run example query; browse the schema's objects to copy one.\n\n"
     "### Notes\n\n"
     "Event coding is `1` = event occurred, `0` = right-censored. The grouping argument of the "
     "group-comparison test collides with the SQL `GROUP` keyword, so quote it at the call site: "
@@ -167,7 +163,111 @@ _SCHEMA_CATEGORIES = json.dumps(
             "name": "comparison",
             "description": "Hypothesis tests that compare survival between groups (the log-rank test).",
         },
+        {
+            "name": "reference",
+            "description": (
+                "Browsable reference relations describing the catalog itself — the survival methods it "
+                "exposes, which question each answers, and what each returns."
+            ),
+        },
     ]
+)
+
+# A VALUES-backed, credential-free browsable relation so an agent can list the
+# available survival methods (and pick the right one) before it has to guess a
+# table-function's arguments. This clears VGI146 (a worker with table functions
+# but no browsable table/view) and scans instantly with no network or secret.
+_METHODS_VIEW = View(
+    name="methods",
+    definition=(
+        "SELECT * FROM (VALUES "
+        "('kaplan_meier', 'estimation', "
+        "'How does an event-free population decline over time?', "
+        "'survival.main.kaplan_meier(relation, duration, event)', "
+        "'One row per distinct follow-up time: survival S(t), a confidence band, and the at-risk count.'), "
+        "('median_survival', 'estimation', "
+        "'What single headline time summarizes a cohort''s survival?', "
+        "'survival.main.median_survival(relation, duration, event)', "
+        "'One row: the median survival time where the Kaplan-Meier curve first reaches S(t)=0.5.'), "
+        "('cox_hazard_ratios', 'regression', "
+        "'How does each covariate raise or lower the hazard?', "
+        "'survival.main.cox_hazard_ratios(relation, duration, event)', "
+        "'One row per covariate: coefficient, hazard ratio, a confidence band, and a Wald p-value.'), "
+        "('logrank_test', 'comparison', "
+        "'Do two or more groups have different survival?', "
+        "'survival.main.logrank_test(relation, duration, event, group)', "
+        "'One row: the chi-squared statistic, the p-value, and the degrees of freedom.')"
+        ") AS m(method, category, question, signature, returns)"
+    ),
+    comment="Registry of the survival table functions this catalog exposes (method, category, question, returns).",
+    column_comments={
+        "method": "Table-function name in the survival.main schema.",
+        "category": "Navigation category: estimation, regression, or comparison.",
+        "question": "The time-to-event question this method answers.",
+        "signature": "Fully-qualified call signature showing the relation and role arguments.",
+        "returns": "One-line description of the rows the method returns.",
+    },
+    tags={
+        "vgi.title": "Survival Methods Registry",
+        "vgi.category": "reference",
+        # VGI123 classifying tags use BARE keys (reused schema vocabulary).
+        "domain": "statistics",
+        "topic": "time-to-event",
+        "vgi.keywords": json.dumps(
+            [
+                "methods",
+                "registry",
+                "catalog",
+                "survival",
+                "table functions",
+                "discovery",
+                "reference",
+            ]
+        ),
+        "vgi.doc_llm": (
+            "A browsable registry of the survival / time-to-event methods this catalog exposes. One row "
+            "per table function, giving its `method` name, its navigation `category` (estimation, "
+            "regression, or comparison), the `question` it answers, its call `signature`, and a "
+            "one-line description of what it `returns`. Scan or filter this relation to discover which "
+            "function fits a task before calling it — e.g. filter by category to list every estimator, "
+            "or read a method's signature to learn which role arguments it needs. It reads instantly "
+            "with no arguments, network access, or credentials."
+        ),
+        "vgi.doc_md": (
+            "# methods\n\n"
+            "A browsable registry of every survival table function in this catalog — a discovery "
+            "aid so an agent can pick the right method before guessing a function's arguments.\n\n"
+            "## Columns\n\n"
+            "`method` (the function name), `category` (estimation / regression / comparison), "
+            "`question` (the time-to-event question it answers), `signature` (its fully-qualified "
+            "call shape), and `returns` (a one-line result summary).\n\n"
+            "## Usage\n\n"
+            "Filter by category to list the estimators, or read a row's signature to learn a "
+            "method's role arguments. The relation is VALUES-backed, so it returns instantly with "
+            "no network access or credentials.\n\n"
+            "## Notes\n\n"
+            "This registry only names the methods; call the listed function itself to run the "
+            "analysis. Event coding across every method is `1` = event occurred, `0` = right-censored."
+        ),
+        "vgi.example_queries": json.dumps(
+            [
+                {
+                    "description": "List every regression method with the question it answers",
+                    "sql": (
+                        "SELECT method, question, returns FROM survival.main.methods "
+                        "WHERE category = 'regression' ORDER BY method"
+                    ),
+                },
+                {
+                    "description": "Count the available survival methods per category",
+                    "sql": (
+                        "SELECT category, count(*) AS n_methods FROM survival.main.methods "
+                        "GROUP BY category ORDER BY category"
+                    ),
+                },
+            ]
+        ),
+    },
 )
 
 # Deterministic analyst tasks for `vgi-lint simulate` (VGI152/VGI920). Each names
@@ -241,6 +341,17 @@ _AGENT_TEST_TASKS = json.dumps(
             "ignore_column_names": True,
             "unordered": True,
         },
+        {
+            "name": "discover_regression_methods",
+            "prompt": (
+                "This catalog exposes several survival / time-to-event methods and also provides a "
+                "browsable relation that lists them. Using that registry of methods, return the name "
+                "of every method whose category is regression."
+            ),
+            "reference_sql": ("SELECT method FROM survival.main.methods WHERE category = 'regression' ORDER BY method"),
+            "ignore_column_names": True,
+            "unordered": True,
+        },
     ]
 )
 
@@ -277,6 +388,7 @@ _SURVIVAL_CATALOG = Catalog(
                 "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
                 "vgi.categories": _SCHEMA_CATEGORIES,
             },
+            views=[_METHODS_VIEW],
             functions=list(_FUNCTIONS),
         ),
     ],

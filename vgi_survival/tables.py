@@ -109,7 +109,16 @@ class KaplanMeierArgs:
 class CoxArgs:
     """Arguments for ``cox_hazard_ratios``: the relation plus duration/event roles."""
 
-    data: Annotated[TableInput, Arg(0, doc="Relation: duration, event, and one+ covariate columns.")]
+    data: Annotated[
+        TableInput,
+        Arg(
+            0,
+            doc=(
+                "The cohort relation to fit; any column that is neither the duration nor the event "
+                "is fitted as a numeric covariate."
+            ),
+        ),
+    ]
     duration: Annotated[str, Arg("duration", default="duration", doc="Time-to-event / follow-up column.")]
     event: Annotated[str, Arg("event", default="event", doc="0/1 event indicator (1 = event occurred).")]
 
@@ -181,11 +190,10 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
                 "Non-parametric **Kaplan-Meier** estimate of the survival function S(t) over a "
                 "buffered cohort relation.\n\n"
                 "## Usage\n\n"
-                "```sql\n"
-                "SELECT * FROM survival.main.kaplan_meier(\n"
-                "  (SELECT t, e FROM cohort), duration := 't', event := 'e'\n"
-                ") ORDER BY time;\n"
-                "```\n\n"
+                "Pass your cohort as the first argument — a parenthesised subquery projecting the "
+                "follow-up time and 0/1 event columns — and name those roles with `duration := 't'` "
+                "and `event := 'e'`. Order the result by `time` to read the curve top to bottom. A "
+                "ready-to-run example is attached to this function.\n\n"
                 "## Returns\n\n"
                 "One row per distinct observed follow-up time (ordered by `time`): the survival "
                 "probability `survival`, its `ci_lower`/`ci_upper` 95% confidence band, and the "
@@ -194,19 +202,34 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
                 "Event coding is `1` = event occurred, `0` = right-censored. The curve begins at 1.0 "
                 "and never increases. The result can be long (one row per distinct time)."
             ),
-            "vgi.result_columns_md": (
-                "One row per distinct observed follow-up time, ordered by `time`.\n\n"
-                "| column | type | description |\n"
-                "| --- | --- | --- |\n"
-                "| `time` | DOUBLE | Distinct observed follow-up time. |\n"
-                "| `survival` | DOUBLE | Kaplan-Meier survival probability S(t) at this time. |\n"
-                "| `ci_lower` | DOUBLE | Lower bound of the survival confidence interval. |\n"
-                "| `ci_upper` | DOUBLE | Upper bound of the survival confidence interval. |\n"
-                "| `at_risk` | BIGINT | Number of subjects still at risk entering this time. |"
+            "vgi.result_columns_schema": json.dumps(
+                [
+                    {"name": "time", "type": "DOUBLE", "description": "Distinct observed follow-up time."},
+                    {
+                        "name": "survival",
+                        "type": "DOUBLE",
+                        "description": "Kaplan-Meier survival probability S(t) at this time.",
+                    },
+                    {
+                        "name": "ci_lower",
+                        "type": "DOUBLE",
+                        "description": "Lower bound of the survival confidence interval.",
+                    },
+                    {
+                        "name": "ci_upper",
+                        "type": "DOUBLE",
+                        "description": "Upper bound of the survival confidence interval.",
+                    },
+                    {
+                        "name": "at_risk",
+                        "type": "BIGINT",
+                        "description": "Number of subjects still at risk entering this time.",
+                    },
+                ]
             ),
             "vgi.executable_examples": (
                 '[{"description": "Kaplan-Meier survival curve for a small cohort", '
-                '"sql": "SELECT * FROM survival.main.kaplan_meier('
+                '"sql": "SELECT time, survival, at_risk FROM survival.main.kaplan_meier('
                 "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
                 "duration := 't', event := 'e') ORDER BY time\"}]"
             ),
@@ -214,11 +237,11 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
         examples = [
             FunctionExample(
                 sql=(
-                    "SELECT * FROM survival.main.kaplan_meier("
+                    "SELECT time, survival, at_risk FROM survival.main.kaplan_meier("
                     "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
                     "duration := 't', event := 'e') ORDER BY time"
                 ),
-                description="Kaplan-Meier survival curve",
+                description="Kaplan-Meier survival curve projected to the survival probability and at-risk count",
             )
         ]
 
@@ -319,11 +342,10 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
                 "# cox_hazard_ratios\n\n"
                 "Fit a **Cox proportional-hazards** model and return per-covariate hazard ratios.\n\n"
                 "## Usage\n\n"
-                "```sql\n"
-                "SELECT * FROM survival.main.cox_hazard_ratios(\n"
-                "  (SELECT t, e, prio FROM cohort), duration := 't', event := 'e'\n"
-                ");\n"
-                "```\n\n"
+                "Pass your cohort as the first argument — a parenthesised subquery projecting the "
+                "follow-up time, the 0/1 event column, and one or more numeric covariate columns — "
+                "and name the `duration := 't'` and `event := 'e'` roles. Project only the covariate "
+                "columns you want fitted. A ready-to-run example is attached to this function.\n\n"
                 "## Returns\n\n"
                 "One row per covariate: the `coef`, the `hazard_ratio` (`exp(coef)`), its "
                 "`ci_lower`/`ci_upper` band, and the Wald `p_value`.\n\n"
@@ -332,26 +354,37 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
                 "columns you want fitted (non-numeric covariates raise an error). A relation with no "
                 "covariate column raises a clear error."
             ),
-            "vgi.result_columns_md": (
-                "One row per covariate (every input column besides duration/event).\n\n"
-                "| column | type | description |\n"
-                "| --- | --- | --- |\n"
-                "| `covariate` | VARCHAR | Covariate (input column) name. |\n"
-                "| `coef` | DOUBLE | Fitted log-hazard coefficient (beta). |\n"
-                "| `hazard_ratio` | DOUBLE | Hazard ratio exp(beta); >1 raises hazard, <1 lowers it. |\n"
-                "| `ci_lower` | DOUBLE | Lower bound of the hazard-ratio confidence interval. |\n"
-                "| `ci_upper` | DOUBLE | Upper bound of the hazard-ratio confidence interval. |\n"
-                "| `p_value` | DOUBLE | Wald-test p-value for the coefficient. |"
+            "vgi.result_columns_schema": json.dumps(
+                [
+                    {"name": "covariate", "type": "VARCHAR", "description": "Covariate (input column) name."},
+                    {"name": "coef", "type": "DOUBLE", "description": "Fitted log-hazard coefficient (beta)."},
+                    {
+                        "name": "hazard_ratio",
+                        "type": "DOUBLE",
+                        "description": "Hazard ratio exp(beta); >1 raises hazard, <1 lowers it.",
+                    },
+                    {
+                        "name": "ci_lower",
+                        "type": "DOUBLE",
+                        "description": "Lower bound of the hazard-ratio confidence interval.",
+                    },
+                    {
+                        "name": "ci_upper",
+                        "type": "DOUBLE",
+                        "description": "Upper bound of the hazard-ratio confidence interval.",
+                    },
+                    {"name": "p_value", "type": "DOUBLE", "description": "Wald-test p-value for the coefficient."},
+                ]
             ),
         }
         examples = [
             FunctionExample(
                 sql=(
-                    "SELECT * FROM survival.main.cox_hazard_ratios("
+                    "SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios("
                     "(SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),"
-                    "(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e')"
+                    "(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate"
                 ),
-                description="Cox hazard ratios for every covariate column",
+                description="Cox hazard ratio and Wald p-value for each covariate",
             )
         ]
 
@@ -448,12 +481,11 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
                 "# logrank_test\n\n"
                 "Multivariate **log-rank test** comparing survival across a grouping column.\n\n"
                 "## Usage\n\n"
-                "```sql\n"
-                "SELECT * FROM survival.main.logrank_test(\n"
-                "  (SELECT t, e, arm FROM cohort),\n"
-                "  duration := 't', event := 'e', \"group\" := 'arm'\n"
-                ");\n"
-                "```\n\n"
+                "Pass your cohort as the first argument — a parenthesised subquery projecting the "
+                "follow-up time, the 0/1 event column, and the grouping column — and name the "
+                "`duration := 't'`, `event := 'e'`, and `\"group\" := 'arm'` roles. Because `group` "
+                "is a SQL keyword it must be double-quoted at the call site. A ready-to-run example "
+                "is attached to this function.\n\n"
                 "## Returns\n\n"
                 "Exactly one row: `test_statistic`, `p_value`, and `degrees_freedom`. A small "
                 "`p_value` means the groups' survival curves differ.\n\n"
@@ -461,24 +493,31 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
                 "Needs at least two distinct groups. `group` is a SQL keyword, so double-quote it at "
                 "the call site (`\"group\" := 'arm'`). Event coding is `1` = event, `0` = censored."
             ),
-            "vgi.result_columns_md": (
-                "Exactly one row with the multivariate log-rank result.\n\n"
-                "| column | type | description |\n"
-                "| --- | --- | --- |\n"
-                "| `test_statistic` | DOUBLE | Log-rank chi-squared test statistic. |\n"
-                "| `p_value` | DOUBLE | p-value of the log-rank test. |\n"
-                "| `degrees_freedom` | INTEGER | Degrees of freedom (number of groups minus one). |"
+            "vgi.result_columns_schema": json.dumps(
+                [
+                    {
+                        "name": "test_statistic",
+                        "type": "DOUBLE",
+                        "description": "Log-rank chi-squared test statistic.",
+                    },
+                    {"name": "p_value", "type": "DOUBLE", "description": "p-value of the log-rank test."},
+                    {
+                        "name": "degrees_freedom",
+                        "type": "INTEGER",
+                        "description": "Degrees of freedom (number of groups minus one).",
+                    },
+                ]
             ),
         }
         examples = [
             FunctionExample(
                 sql=(
-                    "SELECT * FROM survival.main.logrank_test("
+                    "SELECT test_statistic, p_value, degrees_freedom FROM survival.main.logrank_test("
                     "(SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),"
                     "(6,1,'b')) AS c(t, e, arm)), "
                     "duration := 't', event := 'e', \"group\" := 'arm')"
                 ),
-                description="Log-rank test across treatment arms",
+                description="Log-rank statistic and p-value comparing two treatment arms",
             )
         ]
 
@@ -572,32 +611,34 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
                 "# median_survival\n\n"
                 "The **median survival time**: where the Kaplan-Meier curve S(t) first reaches 0.5.\n\n"
                 "## Usage\n\n"
-                "```sql\n"
-                "SELECT * FROM survival.main.median_survival(\n"
-                "  (SELECT t, e FROM cohort), duration := 't', event := 'e'\n"
-                ");\n"
-                "```\n\n"
+                "Pass your cohort as the first argument — a parenthesised subquery projecting the "
+                "follow-up time and 0/1 event columns — and name the `duration := 't'` and "
+                "`event := 'e'` roles. The result is a single row. A ready-to-run example is "
+                "attached to this function.\n\n"
                 "## Returns\n\n"
                 "Exactly one row with the single `median_survival` value.\n\n"
                 "## Notes\n\n"
                 "If S(t) never reaches 0.5 the value is `inf` (median undefined), passed through as a "
                 "float rather than NULL. Event coding is `1` = event, `0` = right-censored."
             ),
-            "vgi.result_columns_md": (
-                "Exactly one row.\n\n"
-                "| column | type | description |\n"
-                "| --- | --- | --- |\n"
-                "| `median_survival` | DOUBLE | Median survival time (where S(t)=0.5); `inf` if never reached. |"
+            "vgi.result_columns_schema": json.dumps(
+                [
+                    {
+                        "name": "median_survival",
+                        "type": "DOUBLE",
+                        "description": "Median survival time (where S(t)=0.5); inf if never reached.",
+                    },
+                ]
             ),
         }
         examples = [
             FunctionExample(
                 sql=(
-                    "SELECT * FROM survival.main.median_survival("
+                    "SELECT median_survival FROM survival.main.median_survival("
                     "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
                     "duration := 't', event := 'e')"
                 ),
-                description="Median survival time",
+                description="Median survival time for a small cohort",
             )
         ]
 
