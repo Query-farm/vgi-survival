@@ -51,8 +51,7 @@ _CATALOG_DOC_MD = (
     "relation, hands it to the appropriate lifelines estimator once, and streams the result back as Arrow "
     "rows — so the numbers match lifelines exactly. Every function is a **table function**: it consumes a "
     "whole `(SELECT ...)` relation as its first argument, and you name which columns play which role using "
-    "named string arguments such as `duration := 't'` and `event := 'e'`. List the `main` schema to "
-    "discover the estimators, regression, and tests it exposes and their per-argument documentation.\n\n"
+    "named string arguments such as `duration := 't'` and `event := 'e'`.\n\n"
     "## When to reach for it\n\n"
     "Reach for the `survival` catalog whenever your question is *time until an event* and your data has a "
     "follow-up duration plus a 0/1 censoring indicator: charting how an event-free population decays over "
@@ -60,8 +59,7 @@ _CATALOG_DOC_MD = (
     "cohort to a single headline survival number. It fits [Kaplan-Meier]"
     "(https://en.wikipedia.org/wiki/Kaplan%E2%80%93Meier_estimator) curves, [Cox proportional-hazards]"
     "(https://en.wikipedia.org/wiki/Proportional_hazards_model) regression, and the [log-rank test]"
-    "(https://en.wikipedia.org/wiki/Logrank_test) — browse the schema's categories to see which function "
-    "answers which question.\n\n"
+    "(https://en.wikipedia.org/wiki/Logrank_test).\n\n"
     "## Notes\n\n"
     "Event coding is `1`/true = event occurred, `0`/false = right-censored — get this backwards and every "
     "curve and hazard ratio inverts. Cox treats every column besides duration/event as a covariate, so "
@@ -75,16 +73,14 @@ _SCHEMA_DOC_LLM = (
     "(and, for group comparisons, group) columns, where `event=1` means the event occurred and "
     "`event=0` means right-censored. Reach for this schema to estimate and chart survival curves, model "
     "how covariates raise or lower the hazard, test whether survival differs across groups, or summarize "
-    "a cohort's survival as a single number. List the schema (and its categories) to discover the "
-    "specific estimators, regression, and tests and their per-argument documentation."
+    "a cohort's survival as a single number."
 )
 
 _SCHEMA_DOC_MD = (
     "## main\n\n"
     "The single schema of the `survival` catalog. It holds the survival / time-to-event table functions "
     "over Apache Arrow, powered by lifelines — grouped into estimation, regression, and comparison "
-    "categories. List the schema (or its categories) to discover the available functions and their "
-    "per-argument docs.\n\n"
+    "categories.\n\n"
     "### Usage\n\n"
     "Pass your cohort as a parenthesised subquery and name the role columns — the follow-up "
     "`duration` and the 0/1 `event` indicator, plus a grouping column for the comparison test. "
@@ -95,19 +91,41 @@ _SCHEMA_DOC_MD = (
     "`\"group\" := 'arm'`."
 )
 
-_SCHEMA_EXAMPLE_QUERIES = (
-    "SELECT * FROM survival.main.kaplan_meier("
-    "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
-    "duration := 't', event := 'e') ORDER BY time;\n"
-    "SELECT * FROM survival.main.cox_hazard_ratios("
-    "(SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),(6,1,1.0)) "
-    "AS c(t, e, prio)), duration := 't', event := 'e');\n"
-    "SELECT * FROM survival.main.logrank_test("
-    "(SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),(6,1,'b')) "
-    "AS c(t, e, arm)), duration := 't', event := 'e', \"group\" := 'arm');\n"
-    "SELECT * FROM survival.main.median_survival("
-    "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
-    "duration := 't', event := 'e');"
+_SCHEMA_EXAMPLE_QUERIES = json.dumps(
+    [
+        {
+            "description": "Kaplan-Meier survival curve for a small cohort, projected and ordered by time",
+            "sql": (
+                "SELECT time, survival, at_risk FROM survival.main.kaplan_meier("
+                "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
+                "duration := 't', event := 'e') ORDER BY time"
+            ),
+        },
+        {
+            "description": "Cox hazard ratio and Wald p-value for a single covariate",
+            "sql": (
+                "SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios("
+                "(SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),(6,1,1.0)) "
+                "AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate"
+            ),
+        },
+        {
+            "description": "Log-rank test comparing survival between two treatment arms",
+            "sql": (
+                "SELECT test_statistic, p_value, degrees_freedom FROM survival.main.logrank_test("
+                "(SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),(6,1,'b')) "
+                "AS c(t, e, arm)), duration := 't', event := 'e', \"group\" := 'arm')"
+            ),
+        },
+        {
+            "description": "Median survival time as a single headline number",
+            "sql": (
+                "SELECT median_survival FROM survival.main.median_survival("
+                "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
+                "duration := 't', event := 'e')"
+            ),
+        },
+    ]
 )
 
 _CATALOG_KEYWORDS = json.dumps(

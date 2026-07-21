@@ -227,11 +227,35 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
                     },
                 ]
             ),
-            "vgi.executable_examples": (
-                '[{"description": "Kaplan-Meier survival curve for a small cohort", '
-                '"sql": "SELECT time, survival, at_risk FROM survival.main.kaplan_meier('
-                "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
-                "duration := 't', event := 'e') ORDER BY time\"}]"
+            "vgi.example_queries": json.dumps(
+                [
+                    {
+                        "description": (
+                            "Kaplan-Meier survival curve projected to the survival probability and at-risk count"
+                        ),
+                        "sql": (
+                            "SELECT time, survival, at_risk FROM survival.main.kaplan_meier("
+                            "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
+                            "duration := 't', event := 'e') ORDER BY time"
+                        ),
+                    }
+                ]
+            ),
+            "vgi.executable_examples": json.dumps(
+                [
+                    {
+                        "description": (
+                            "Kaplan-Meier survival at the first observed event time for a small cohort "
+                            "(one death at t=3 among 5 at risk gives S=0.8)"
+                        ),
+                        "sql": (
+                            "SELECT time, survival, at_risk FROM survival.main.kaplan_meier("
+                            "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
+                            "duration := 't', event := 'e') WHERE time = 3"
+                        ),
+                        "expected_result": [{"time": 3.0, "survival": 0.8, "at_risk": 5}],
+                    }
+                ]
             ),
         }
         examples = [
@@ -376,6 +400,18 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
                     {"name": "p_value", "type": "DOUBLE", "description": "Wald-test p-value for the coefficient."},
                 ]
             ),
+            "vgi.example_queries": json.dumps(
+                [
+                    {
+                        "description": "Cox hazard ratio and Wald p-value for each covariate",
+                        "sql": (
+                            "SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios("
+                            "(SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),"
+                            "(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate"
+                        ),
+                    }
+                ]
+            ),
         }
         examples = [
             FunctionExample(
@@ -508,6 +544,19 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
                     },
                 ]
             ),
+            "vgi.example_queries": json.dumps(
+                [
+                    {
+                        "description": "Log-rank statistic and p-value comparing two treatment arms",
+                        "sql": (
+                            "SELECT test_statistic, p_value, degrees_freedom FROM survival.main.logrank_test("
+                            "(SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),"
+                            "(6,1,'b')) AS c(t, e, arm)), "
+                            "duration := 't', event := 'e', \"group\" := 'arm')"
+                        ),
+                    }
+                ]
+            ),
         }
         examples = [
             FunctionExample(
@@ -628,6 +677,18 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
                         "type": "DOUBLE",
                         "description": "Median survival time (where S(t)=0.5); inf if never reached.",
                     },
+                ]
+            ),
+            "vgi.example_queries": json.dumps(
+                [
+                    {
+                        "description": "Median survival time for a small cohort",
+                        "sql": (
+                            "SELECT median_survival FROM survival.main.median_survival("
+                            "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
+                            "duration := 't', event := 'e')"
+                        ),
+                    }
                 ]
             ),
         }
