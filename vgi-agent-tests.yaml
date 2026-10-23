@@ -1,0 +1,23 @@
+# Private graders for `vgi-lint simulate` (VGI416). The worker publishes only
+# task names and prompts in vgi.agent_test_tasks; these canonical solutions and
+# grading options stay in the repo and are merged by task name.
+tasks:
+  - name: kaplan_meier_curve
+    reference_sql: "SELECT time, survival FROM survival.main.kaplan_meier((SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), duration := 't', event := 'e') ORDER BY time"
+    ignore_column_names: true
+  - name: cox_hazard_ratio_for_covariate
+    reference_sql: "SELECT covariate, hazard_ratio FROM survival.main.cox_hazard_ratios((SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e')"
+    ignore_column_names: true
+    unordered: true
+  - name: logrank_compare_arms
+    reference_sql: "SELECT test_statistic, p_value, degrees_freedom FROM survival.main.logrank_test((SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),(6,1,'b')) AS c(t, e, arm)), duration := 't', event := 'e', \"group\" := 'arm')"
+    ignore_column_names: true
+    unordered: true
+  - name: median_survival_time
+    reference_sql: "SELECT median_survival FROM survival.main.median_survival((SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), duration := 't', event := 'e')"
+    ignore_column_names: true
+    unordered: true
+  - name: discover_regression_methods
+    reference_sql: "SELECT method FROM survival.main.methods WHERE category = 'regression' ORDER BY method"
+    ignore_column_names: true
+    unordered: true

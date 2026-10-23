@@ -76,8 +76,7 @@ def result_to_ipc(batch: pa.RecordBatch) -> bytes:
         The Arrow IPC stream bytes carried in ``DrainState.result_ipc``.
     """
     sink = pa.BufferOutputStream()
-    # pyarrow.ipc.* is untyped (ships py.typed but no ipc stub).
-    with pa.ipc.new_stream(sink, batch.schema) as writer:  # type: ignore[no-untyped-call]
+    with pa.ipc.new_stream(sink, batch.schema) as writer:
         writer.write_batch(batch)
     result: bytes = sink.getvalue().to_pybytes()
     return result
@@ -92,8 +91,7 @@ def ipc_to_table(value: bytes) -> pa.Table:
     Returns:
         The materialized result as an Arrow table.
     """
-    # pyarrow.ipc.* is untyped (ships py.typed but no ipc stub).
-    reader = pa.ipc.open_stream(pa.BufferReader(value))  # type: ignore[no-untyped-call]
+    reader = pa.ipc.open_stream(pa.BufferReader(value))
     table: pa.Table = reader.read_all()
     return table
 
@@ -108,8 +106,7 @@ def serialize_batch(batch: pa.RecordBatch) -> bytes:
         The Arrow IPC stream bytes for the batch.
     """
     sink = pa.BufferOutputStream()
-    # pyarrow.ipc.* is untyped (ships py.typed but no ipc stub).
-    with pa.ipc.new_stream(sink, batch.schema) as writer:  # type: ignore[no-untyped-call]
+    with pa.ipc.new_stream(sink, batch.schema) as writer:
         writer.write_batch(batch)
     result: bytes = sink.getvalue().to_pybytes()
     return result
@@ -124,15 +121,14 @@ def deserialize_batches(value: bytes) -> list[pa.RecordBatch]:
     Returns:
         The record batches contained in the stream.
     """
-    # pyarrow.ipc.* is untyped (ships py.typed but no ipc stub).
-    reader = pa.ipc.open_stream(pa.BufferReader(value))  # type: ignore[no-untyped-call]
+    reader = pa.ipc.open_stream(pa.BufferReader(value))
     batches: list[pa.RecordBatch] = reader.read_all().to_batches()
     return batches
 
 
 def input_schema_of(params: Any) -> pa.Schema:
     """Input schema from a process/finalize params object."""
-    schema = params.init_call.bind_call.input_schema
+    schema: pa.Schema | None = params.init_call.bind_call.input_schema
     assert schema is not None
     return schema
 

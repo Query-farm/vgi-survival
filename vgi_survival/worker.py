@@ -292,7 +292,9 @@ _METHODS_VIEW = View(
 # exactly the columns it asks for; grading compares by VALUE (ignore_column_names)
 # so an aliased/reordered projection still matches the canonical reference_sql, and
 # both queries run the same lifelines estimator on the same inline cohort — so the
-# floats are byte-identical. Together they cover all four functions.
+# floats are byte-identical. Together they cover all four functions. VGI416: the
+# public tag carries only {name, prompt}; the grader-only fields (`reference_sql`,
+# `ignore_column_names`, ...) live in the private `vgi-agent-tests.yaml` sidecar.
 _AGENT_TEST_TASKS = json.dumps(
     [
         {
@@ -304,12 +306,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "curve as two columns — the observed time and the survival probability "
                 "S(t) — ordered by time ascending."
             ),
-            "reference_sql": (
-                "SELECT time, survival FROM survival.main.kaplan_meier("
-                "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
-                "duration := 't', event := 'e') ORDER BY time"
-            ),
-            "ignore_column_names": True,
         },
         {
             "name": "cox_hazard_ratio_for_covariate",
@@ -319,13 +315,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "`prio`, with rows (5,1,1.0), (8,0,0.0), (12,1,2.0), (3,1,3.0), (9,0,0.0), "
                 "(6,1,1.0). Return the covariate name and its hazard ratio."
             ),
-            "reference_sql": (
-                "SELECT covariate, hazard_ratio FROM survival.main.cox_hazard_ratios("
-                "(SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),"
-                "(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e')"
-            ),
-            "ignore_column_names": True,
-            "unordered": True,
         },
         {
             "name": "logrank_compare_arms",
@@ -336,13 +325,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "(6,1,'b'). Use the log-rank test to compare survival between the arms and "
                 "return the test statistic, the p-value, and the degrees of freedom."
             ),
-            "reference_sql": (
-                "SELECT test_statistic, p_value, degrees_freedom FROM survival.main.logrank_test("
-                "(SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),"
-                "(6,1,'b')) AS c(t, e, arm)), duration := 't', event := 'e', \"group\" := 'arm')"
-            ),
-            "ignore_column_names": True,
-            "unordered": True,
         },
         {
             "name": "median_survival_time",
@@ -351,13 +333,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "(1 = the event occurred, 0 = right-censored), with rows "
                 "(5,1), (8,0), (12,1), (3,1), (9,0). Return the median survival time."
             ),
-            "reference_sql": (
-                "SELECT median_survival FROM survival.main.median_survival("
-                "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
-                "duration := 't', event := 'e')"
-            ),
-            "ignore_column_names": True,
-            "unordered": True,
         },
         {
             "name": "discover_regression_methods",
@@ -366,9 +341,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "browsable relation that lists them. Using that registry of methods, return the name "
                 "of every method whose category is regression."
             ),
-            "reference_sql": ("SELECT method FROM survival.main.methods WHERE category = 'regression' ORDER BY method"),
-            "ignore_column_names": True,
-            "unordered": True,
         },
     ]
 )
@@ -392,7 +364,7 @@ _SURVIVAL_CATALOG = Catalog(
     },
     schemas=[
         Schema(
-            name="main",
+            path=["main"],
             comment="Survival / time-to-event analysis (Kaplan-Meier, Cox PH, log-rank) for SQL",
             tags={
                 "vgi.title": "Survival Analysis Functions",
