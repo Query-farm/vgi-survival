@@ -1,6 +1,6 @@
 [project]
 name = "vgi-survival"
-version = "0.1.0"
+version = "0.2.0"
 description = "Survival / time-to-event analysis (Kaplan-Meier, Cox proportional-hazards, log-rank) for DuckDB via VGI"
 readme = "README.md"
 keywords = [
