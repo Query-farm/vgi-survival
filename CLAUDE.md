@@ -135,5 +135,5 @@ uv run --no-sync ruff check . && uv run --no-sync mypy vgi_survival/
 `make test-sql` sets `VGI_SURVIVAL_WORKER="uv run --python 3.13
 survival_worker.py"`, puts `~/.local/bin` on PATH, and runs `haybarn-unittest
 --test-dir . "test/sql/*"`. Install the runner once with
-`uv tool install haybarn-unittest`. Everything is offline/hermetic (lifelines
+`uv tool install --prerelease allow 'haybarn-unittest>=2.0.0rc11,<2.1'`. Everything is offline/hermetic (lifelines
 datasets ship with the package).

@@ -8,7 +8,7 @@ statement ok
 LOAD vgi;
 
 statement ok
-ATTACH 'survival' AS survival (TYPE vgi, LOCATION '${VGI_SURVIVAL_WORKER}');
+ATTACH 'survival' AS survival (TYPE vgi, LOCATION '{VGI_SURVIVAL_WORKER}');
 
 # A small cohort: duration t, event e (1=event, 0=censored), covariate x, arm.
 statement ok
