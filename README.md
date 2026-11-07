@@ -15,7 +15,7 @@ backed by [lifelines](https://lifelines.readthedocs.io/) (MIT).
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'survival' (TYPE vgi, LOCATION 'uv run survival_worker.py');
+ATTACH 'survival' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.2.0 vgi-survival-worker');
 
 -- Kaplan-Meier survival curve
 SELECT * FROM survival.kaplan_meier((SELECT t, e FROM cohort),
@@ -34,6 +34,39 @@ SELECT * FROM survival.logrank_test((SELECT * FROM cohort),
 SELECT * FROM survival.median_survival((SELECT t, e FROM cohort),
                                        duration := 't', event := 'e');
 ```
+
+## Quick start
+
+The worker isn't on PyPI; [uv](https://docs.astral.sh/uv/) runs it straight from a tagged release on GitHub. `uvx` builds an isolated environment on the first ATTACH and reuses it afterwards:
+
+```sql
+INSTALL vgi FROM community;
+LOAD vgi;
+
+ATTACH 'survival' AS survival (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.2.0 vgi-survival-worker');
+
+-- Kaplan-Meier survival curve for a small cohort, projected and ordered by time
+SELECT time, survival, at_risk FROM survival.main.kaplan_meier((SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), duration := 't', event := 'e') ORDER BY time;
+
+-- Cox hazard ratio and Wald p-value for a single covariate
+SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios((SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate;
+```
+
+Change `@v0.2.0` to move to a newer release.
+
+### Other ways to run it
+
+- **Docker** (the image bundles the worker and its dependencies):
+
+  ```sql
+  ATTACH 'survival' AS survival (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-survival:0.2.0');
+  ```
+
+- **From a local checkout** (`git clone https://github.com/Query-farm/vgi-survival`), point `LOCATION` at `uv run --project /path/to/vgi-survival vgi-survival-worker`.
+
+### Build from source
+
+To build and test the worker yourself from a checkout, see [Development](#development).
 
 ## Data flow: one relation in, a result set out
 
