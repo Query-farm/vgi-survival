@@ -351,7 +351,8 @@ _SURVIVAL_CATALOG = Catalog(
     comment="Survival / time-to-event analysis (Kaplan-Meier, Cox PH, log-rank, median survival) for SQL.",
     source_url="https://github.com/Query-farm/vgi-survival",
     tags={
-        "vgi.title": "Survival & Time-to-Event Analysis",
+        "vgi.title": "Survival analysis",
+        "vgi.subtitle": "Estimate survival curves, hazard ratios and log-rank tests from time-to-event data.",
         "vgi.keywords": _CATALOG_KEYWORDS,
         "vgi.doc_llm": _CATALOG_DOC_LLM,
         "vgi.doc_md": _CATALOG_DOC_MD,
