@@ -15,7 +15,7 @@ backed by [lifelines](https://lifelines.readthedocs.io/) (MIT).
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'survival' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.3.0 vgi-survival-worker');
+ATTACH 'survival' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.4.0 vgi-survival-worker');
 
 -- Kaplan-Meier survival curve
 SELECT * FROM survival.kaplan_meier((SELECT t, e FROM cohort),
@@ -43,7 +43,7 @@ The worker isn't on PyPI; [uv](https://docs.astral.sh/uv/) runs it straight from
 INSTALL vgi FROM community;
 LOAD vgi;
 
-ATTACH 'survival' AS survival (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.3.0 vgi-survival-worker');
+ATTACH 'survival' AS survival (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.4.0 vgi-survival-worker');
 
 -- Kaplan-Meier survival curve for a small cohort, projected and ordered by time
 SELECT time, survival, at_risk FROM survival.main.kaplan_meier((SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), duration := 't', event := 'e') ORDER BY time;
@@ -52,7 +52,7 @@ SELECT time, survival, at_risk FROM survival.main.kaplan_meier((SELECT * FROM (V
 SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios((SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate;
 ```
 
-Change `@v0.3.0` to move to a newer release.
+Change `@v0.4.0` to move to a newer release.
 
 ### Other ways to run it
 

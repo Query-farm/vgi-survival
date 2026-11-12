@@ -1,6 +1,6 @@
 [project]
 name = "vgi-survival"
-version = "0.3.0"
+version = "0.4.0"
 description = "Survival / time-to-event analysis (Kaplan-Meier, Cox proportional-hazards, log-rank) for DuckDB via VGI"
 readme = "README.md"
 keywords = [
@@ -30,7 +30,7 @@ classifiers = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "vgi-python>=0.50.0",
+    "vgi-python>=0.51.0",
     "lifelines>=0.27",
     "numpy",
     "pandas",
@@ -42,13 +42,13 @@ dependencies = [
 # in addition to stdio. That path needs vgi-python's `http` extra (waitress).
 # CI's http transport leg installs this via `uv sync --extra http`.
 http = [
-    "vgi-python[http]>=0.50.0",
+    "vgi-python[http]>=0.51.0",
 ]
 # HTTP-serving extra — installed by the published Docker image (`.[serve]`) so the
 # container can serve the worker over HTTP (/health + VGI RPC) via `vgi-serve --http`.
 # Alias of `http`; a plain stdio install stays lean (DuckDB owns the pipe).
 serve = [
-    "vgi-python[http]>=0.50.0",
+    "vgi-python[http]>=0.51.0",
 ]
 dev = [
     "pytest>=8",
