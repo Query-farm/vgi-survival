@@ -163,3 +163,7 @@ Written by [Query.Farm](https://query.farm).
 
 Copyright 2026 Query Farm LLC - https://query.farm
 
+
+## Executed notebook
+
+[Censoring, risk sets and the median](notebooks/README.md) — an executable SQL investigation using synthetic follow-up records, Kaplan–Meier estimates and a shorter observation-window experiment.

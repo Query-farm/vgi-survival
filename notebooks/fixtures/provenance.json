@@ -1,0 +1,36 @@
+{
+  "provenance": "All 24 device identifiers and follow-up times are invented; not measured devices or patients.",
+  "rows": 24,
+  "time_unit": "days since a shared synthetic time zero; no calendar dates",
+  "event_coding": "1 = observed failure, 0 = right-censored; follow-up end is not failure",
+  "recorded_failure_days": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    6,
+    7,
+    8,
+    9,
+    10,
+    12,
+    14,
+    16,
+    18,
+    22
+  ],
+  "recorded_censor_days": [
+    4,
+    6,
+    8,
+    10,
+    12,
+    14,
+    16,
+    18,
+    20
+  ],
+  "sha256": "b8e622a3e35c4476fa1a80080dadcbf07467c9b94e56ee9d1f24ef1229ebf1ad",
+  "design": "Deliberate ties and censoring illustrate product-limit arithmetic; no random sampling or population inference."
+}
