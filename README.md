@@ -164,6 +164,6 @@ Written by [Query.Farm](https://query.farm).
 Copyright 2026 Query Farm LLC - https://query.farm
 
 
-## Executed notebook
+## Executed notebooks
 
-[Censoring, risk sets and the median](notebooks/README.md) — an executable SQL investigation using synthetic follow-up records, Kaplan–Meier estimates and a shorter observation-window experiment.
+[Survival analysis examples](notebooks/README.md) — SQL investigations of censoring, risk sets and median survival, plus group comparison and Cox hazard-ratio units. Both include saved SVG results and Open in Colab links.

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "repository": "Query-farm/vgi-survival",
+  "revision": "v0.4.0",
+  "captured_at": "2026-11-14T21:50:24.019524+00:00",
+  "default_schema": "main",
+  "scope": "all_public_functions_and_tables",
+  "complete": true,
+  "objects": [
+    {
+      "schema": "main",
+      "name": "cox_hazard_ratios",
+      "kind": "function",
+      "signatures": [
+        "cox_hazard_ratios(TABLE, VARCHAR, VARCHAR) -> None"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "kaplan_meier",
+      "kind": "function",
+      "signatures": [
+        "kaplan_meier(TABLE, VARCHAR, VARCHAR) -> None"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "logrank_test",
+      "kind": "function",
+      "signatures": [
+        "logrank_test(TABLE, VARCHAR, VARCHAR, VARCHAR) -> None"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "median_survival",
+      "kind": "function",
+      "signatures": [
+        "median_survival(TABLE, VARCHAR, VARCHAR) -> None"
+      ],
+      "authentication": "none",
+      "access": "read"
+    },
+    {
+      "schema": "main",
+      "name": "methods",
+      "kind": "table",
+      "signatures": [
+        "VIEW"
+      ],
+      "authentication": "none",
+      "access": "read"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "coverage/functions.json",
+      "sha256": "97ad1f6f8295af0d4bbc49e3356d3e380b6c64532baf0015f632319f9e9606ff",
+      "description": "Complete real released runtime functions export"
+    },
+    {
+      "path": "coverage/tables.json",
+      "sha256": "877c9c04adbbf7744fd0e18fb4c1ed2f245f3bb0eb8b76961874cfe5ce832530",
+      "description": "Complete real released runtime tables export"
+    },
+    {
+      "path": "coverage/views.json",
+      "sha256": "bf794d75b78b80ff4b82e16ca6a29b4cd9e8e8d4c18123e8d76a31b03323c497",
+      "description": "Complete real released runtime views export"
+    }
+  ]
+}

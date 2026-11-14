@@ -1,0 +1,44 @@
+{
+  "query": "SELECT * FROM duckdb_views() WHERE database_name='survival' ORDER BY schema_name,view_name",
+  "columns": [
+    "database_name",
+    "database_oid",
+    "schema_name",
+    "schema_oid",
+    "view_name",
+    "view_oid",
+    "comment",
+    "tags",
+    "internal",
+    "temporary",
+    "column_count",
+    "sql",
+    "is_bound"
+  ],
+  "rows": [
+    [
+      "survival",
+      22592,
+      "main",
+      22593,
+      "methods",
+      22730,
+      "Registry of the survival table functions this catalog exposes (method, category, question, returns).",
+      {
+        "domain": "statistics",
+        "topic": "time-to-event",
+        "vgi.category": "reference",
+        "vgi.doc_llm": "A browsable registry of the survival / time-to-event methods this catalog exposes. One row per table function, giving its `method` name, its navigation `category` (estimation, regression, or comparison), the `question` it answers, its call `signature`, and a one-line description of what it `returns`. Scan or filter this relation to discover which function fits a task before calling it \u2014 e.g. filter by category to list every estimator, or read a method's signature to learn which role arguments it needs. It reads instantly with no arguments, network access, or credentials.",
+        "vgi.doc_md": "# methods\n\nA browsable registry of every survival table function in this catalog \u2014 a discovery aid so an agent can pick the right method before guessing a function's arguments.\n\n## Columns\n\n`method` (the function name), `category` (estimation / regression / comparison), `question` (the time-to-event question it answers), `signature` (its fully-qualified call shape), and `returns` (a one-line result summary).\n\n## Usage\n\nFilter by category to list the estimators, or read a row's signature to learn a method's role arguments. The relation is VALUES-backed, so it returns instantly with no network access or credentials.\n\n## Notes\n\nThis registry only names the methods; call the listed function itself to run the analysis. Event coding across every method is `1` = event occurred, `0` = right-censored.",
+        "vgi.example_queries": "[{\"description\": \"List every regression method with the question it answers\", \"sql\": \"SELECT method, question, returns FROM survival.main.methods WHERE category = 'regression' ORDER BY method\"}, {\"description\": \"Count the available survival methods per category\", \"sql\": \"SELECT category, count(*) AS n_methods FROM survival.main.methods GROUP BY category ORDER BY category\"}]",
+        "vgi.keywords": "[\"methods\", \"registry\", \"catalog\", \"survival\", \"table functions\", \"discovery\", \"reference\"]",
+        "vgi.title": "Survival Methods Registry"
+      },
+      false,
+      false,
+      null,
+      "CREATE VIEW methods AS SELECT * FROM (SELECT * FROM (VALUES ('kaplan_meier', 'estimation', 'How does an event-free population decline over time?', 'survival.main.kaplan_meier(relation, duration, event)', 'One row per distinct follow-up time: survival S(t), a confidence band, and the at-risk count.'), ('median_survival', 'estimation', 'What single headline time summarizes a cohort''s survival?', 'survival.main.median_survival(relation, duration, event)', 'One row: the median survival time where the Kaplan-Meier curve first reaches S(t)=0.5.'), ('cox_hazard_ratios', 'regression', 'How does each covariate raise or lower the hazard?', 'survival.main.cox_hazard_ratios(relation, duration, event)', 'One row per covariate: coefficient, hazard ratio, a confidence band, and a Wald p-value.'), ('logrank_test', 'comparison', 'Do two or more groups have different survival?', 'survival.main.logrank_test(relation, duration, event, group)', 'One row: the chi-squared statistic, the p-value, and the degrees of freedom.')) AS valueslist) AS m(\"method\", category, question, signature, \"returns\");",
+      false
+    ]
+  ]
+}

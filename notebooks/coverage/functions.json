@@ -1,0 +1,207 @@
+{
+  "query": "SELECT * FROM duckdb_functions() WHERE database_name='survival' ORDER BY schema_name,function_name",
+  "columns": [
+    "database_name",
+    "database_oid",
+    "schema_name",
+    "function_name",
+    "alias_of",
+    "function_type",
+    "description",
+    "comment",
+    "tags",
+    "return_type",
+    "parameters",
+    "parameter_types",
+    "varargs",
+    "macro_definition",
+    "has_side_effects",
+    "internal",
+    "extension_name",
+    "function_oid",
+    "examples",
+    "stability",
+    "categories"
+  ],
+  "rows": [
+    [
+      "survival",
+      "22592",
+      "main",
+      "cox_hazard_ratios",
+      null,
+      "table",
+      "Cox proportional-hazards model. Every column besides duration/event is a covariate; emits (covariate, coef, hazard_ratio, ci_lower, ci_upper, p_value).",
+      null,
+      {
+        "vgi.category": "regression",
+        "vgi.doc_llm": "Fit a Cox proportional-hazards regression to a cohort relation and report one hazard ratio per covariate. Pass the cohort as `(SELECT ...)` containing `duration`, `event` (0/1; 1 = event occurred), and one or more numeric covariate columns; every column that is not the duration or event is treated as a covariate. Returns one row per covariate with the fitted log-hazard coefficient, the hazard ratio exp(coef) (>1 raises risk, <1 lowers it), a 95% confidence interval, and the Wald p-value. Use it to quantify and rank how each factor influences the rate of the event. Select exactly the covariate columns you want \u2014 do not feed id/string columns.",
+        "vgi.doc_md": "# cox_hazard_ratios\n\nFit a **Cox proportional-hazards** model and return per-covariate hazard ratios.\n\n## Usage\n\nPass your cohort as the first argument \u2014 a parenthesised subquery projecting the follow-up time, the 0/1 event column, and one or more numeric covariate columns \u2014 and name the `duration := 't'` and `event := 'e'` roles. Project only the covariate columns you want fitted. A ready-to-run example is attached to this function.\n\n## Returns\n\nOne row per covariate: the `coef`, the `hazard_ratio` (`exp(coef)`), its `ci_lower`/`ci_upper` band, and the Wald `p_value`.\n\n## Notes\n\nEvery column besides `duration`/`event` becomes a covariate, so `SELECT` only the columns you want fitted (non-numeric covariates raise an error). A relation with no covariate column raises a clear error.",
+        "vgi.example_queries": "[{\"description\": \"Cox hazard ratio and Wald p-value for each covariate\", \"sql\": \"SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios((SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate\"}]",
+        "vgi.keywords": "[\"cox\", \"cox regression\", \"proportional hazards\", \"hazard ratio\", \"coxph\", \"coefficient\", \"covariate\", \"risk factor\", \"multivariate\", \"p-value\", \"regression\", \"time-to-event\"]",
+        "vgi.result_columns_schema": "[{\"name\": \"covariate\", \"type\": \"VARCHAR\", \"description\": \"Covariate (input column) name.\"}, {\"name\": \"coef\", \"type\": \"DOUBLE\", \"description\": \"Fitted log-hazard coefficient (beta).\"}, {\"name\": \"hazard_ratio\", \"type\": \"DOUBLE\", \"description\": \"Hazard ratio exp(beta); >1 raises hazard, <1 lowers it.\"}, {\"name\": \"ci_lower\", \"type\": \"DOUBLE\", \"description\": \"Lower bound of the hazard-ratio confidence interval.\"}, {\"name\": \"ci_upper\", \"type\": \"DOUBLE\", \"description\": \"Upper bound of the hazard-ratio confidence interval.\"}, {\"name\": \"p_value\", \"type\": \"DOUBLE\", \"description\": \"Wald-test p-value for the coefficient.\"}]",
+        "vgi.title": "Cox Proportional-Hazards Ratios"
+      },
+      null,
+      [
+        "data",
+        "event",
+        "duration"
+      ],
+      [
+        "TABLE",
+        "VARCHAR",
+        "VARCHAR"
+      ],
+      null,
+      null,
+      null,
+      true,
+      null,
+      22596,
+      [
+        "SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios((SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate"
+      ],
+      null,
+      [
+        "survival",
+        "regression"
+      ]
+    ],
+    [
+      "survival",
+      "22592",
+      "main",
+      "kaplan_meier",
+      null,
+      "table",
+      "Kaplan-Meier survival curve: (time, survival, ci_lower, ci_upper, at_risk). event=1/true means the event occurred; 0/false means censored.",
+      null,
+      {
+        "vgi.category": "estimation",
+        "vgi.doc_llm": "Estimate the non-parametric Kaplan-Meier survival function S(t) from a cohort relation. Pass the cohort as `(SELECT ...)` and name the `duration` (follow-up time) and `event` (0/1 indicator; 1 = event occurred, 0 = right-censored) columns. Returns one row per distinct observed time, ordered by time, with the survival probability, a confidence interval, and the number of subjects still at risk. Use it to chart how a population's survival declines over time \u2014 clinical follow-up, customer churn, or hardware reliability. The curve starts at 1.0 and is monotonically non-increasing.",
+        "vgi.doc_md": "# kaplan_meier\n\nNon-parametric **Kaplan-Meier** estimate of the survival function S(t) over a buffered cohort relation.\n\n## Usage\n\nPass your cohort as the first argument \u2014 a parenthesised subquery projecting the follow-up time and 0/1 event columns \u2014 and name those roles with `duration := 't'` and `event := 'e'`. Order the result by `time` to read the curve top to bottom. A ready-to-run example is attached to this function.\n\n## Returns\n\nOne row per distinct observed follow-up time (ordered by `time`): the survival probability `survival`, its `ci_lower`/`ci_upper` 95% confidence band, and the `at_risk` count.\n\n## Notes\n\nEvent coding is `1` = event occurred, `0` = right-censored. The curve begins at 1.0 and never increases. The result can be long (one row per distinct time).",
+        "vgi.example_queries": "[{\"description\": \"Kaplan-Meier survival curve projected to the survival probability and at-risk count\", \"sql\": \"SELECT time, survival, at_risk FROM survival.main.kaplan_meier((SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), duration := 't', event := 'e') ORDER BY time\"}]",
+        "vgi.executable_examples": "[{\"description\": \"Kaplan-Meier survival at the first observed event time for a small cohort (one death at t=3 among 5 at risk gives S=0.8)\", \"sql\": \"SELECT time, survival, at_risk FROM survival.main.kaplan_meier((SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), duration := 't', event := 'e') WHERE time = 3\", \"expected_result\": [{\"time\": 3.0, \"survival\": 0.8, \"at_risk\": 5}]}]",
+        "vgi.keywords": "[\"kaplan-meier\", \"kaplan meier\", \"survival curve\", \"survival function\", \"S(t)\", \"confidence interval\", \"at risk\", \"censoring\", \"non-parametric\", \"time-to-event\"]",
+        "vgi.result_columns_schema": "[{\"name\": \"time\", \"type\": \"DOUBLE\", \"description\": \"Distinct observed follow-up time.\"}, {\"name\": \"survival\", \"type\": \"DOUBLE\", \"description\": \"Kaplan-Meier survival probability S(t) at this time.\"}, {\"name\": \"ci_lower\", \"type\": \"DOUBLE\", \"description\": \"Lower bound of the survival confidence interval.\"}, {\"name\": \"ci_upper\", \"type\": \"DOUBLE\", \"description\": \"Upper bound of the survival confidence interval.\"}, {\"name\": \"at_risk\", \"type\": \"BIGINT\", \"description\": \"Number of subjects still at risk entering this time.\"}]",
+        "vgi.title": "Kaplan-Meier Survival Curve"
+      },
+      null,
+      [
+        "data",
+        "event",
+        "duration"
+      ],
+      [
+        "TABLE",
+        "VARCHAR",
+        "VARCHAR"
+      ],
+      null,
+      null,
+      null,
+      true,
+      null,
+      22597,
+      [
+        "SELECT time, survival, at_risk FROM survival.main.kaplan_meier((SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), duration := 't', event := 'e') ORDER BY time"
+      ],
+      null,
+      [
+        "survival",
+        "estimator"
+      ]
+    ],
+    [
+      "survival",
+      "22592",
+      "main",
+      "logrank_test",
+      null,
+      "table",
+      "Log-rank test comparing survival across the group column; emits one row (test_statistic, p_value, degrees_freedom).",
+      null,
+      {
+        "vgi.category": "comparison",
+        "vgi.doc_llm": "Run the multivariate log-rank test to ask whether survival differs across two or more groups. Pass the cohort as `(SELECT ...)` with `duration`, `event` (0/1), and a `group` column, and name those roles. Returns a single row: the chi-squared test statistic, the p-value, and the degrees of freedom (number of groups minus one). A small p-value (e.g. < 0.05) indicates the survival curves of the groups differ. Use it to compare treatment arms, segments, or cohorts. Note the `group` argument collides with the SQL `GROUP` keyword, so quote it at the call site as `\"group\" := 'arm'`.",
+        "vgi.doc_md": "# logrank_test\n\nMultivariate **log-rank test** comparing survival across a grouping column.\n\n## Usage\n\nPass your cohort as the first argument \u2014 a parenthesised subquery projecting the follow-up time, the 0/1 event column, and the grouping column \u2014 and name the `duration := 't'`, `event := 'e'`, and `\"group\" := 'arm'` roles. Because `group` is a SQL keyword it must be double-quoted at the call site. A ready-to-run example is attached to this function.\n\n## Returns\n\nExactly one row: `test_statistic`, `p_value`, and `degrees_freedom`. A small `p_value` means the groups' survival curves differ.\n\n## Notes\n\nNeeds at least two distinct groups. `group` is a SQL keyword, so double-quote it at the call site (`\"group\" := 'arm'`). Event coding is `1` = event, `0` = censored.",
+        "vgi.example_queries": "[{\"description\": \"Log-rank statistic and p-value comparing two treatment arms\", \"sql\": \"SELECT test_statistic, p_value, degrees_freedom FROM survival.main.logrank_test((SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),(6,1,'b')) AS c(t, e, arm)), duration := 't', event := 'e', \\\"group\\\" := 'arm')\"}]",
+        "vgi.keywords": "[\"log-rank\", \"logrank\", \"log rank test\", \"survival comparison\", \"chi-squared\", \"p-value\", \"treatment arms\", \"groups\", \"hypothesis test\", \"multivariate\", \"time-to-event\"]",
+        "vgi.result_columns_schema": "[{\"name\": \"test_statistic\", \"type\": \"DOUBLE\", \"description\": \"Log-rank chi-squared test statistic.\"}, {\"name\": \"p_value\", \"type\": \"DOUBLE\", \"description\": \"p-value of the log-rank test.\"}, {\"name\": \"degrees_freedom\", \"type\": \"INTEGER\", \"description\": \"Degrees of freedom (number of groups minus one).\"}]",
+        "vgi.title": "Log-Rank Test Across Groups"
+      },
+      null,
+      [
+        "data",
+        "event",
+        "group",
+        "duration"
+      ],
+      [
+        "TABLE",
+        "VARCHAR",
+        "VARCHAR",
+        "VARCHAR"
+      ],
+      null,
+      null,
+      null,
+      true,
+      null,
+      22598,
+      [
+        "SELECT test_statistic, p_value, degrees_freedom FROM survival.main.logrank_test((SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),(6,1,'b')) AS c(t, e, arm)), duration := 't', event := 'e', \"group\" := 'arm')"
+      ],
+      null,
+      [
+        "survival",
+        "test"
+      ]
+    ],
+    [
+      "survival",
+      "22592",
+      "main",
+      "median_survival",
+      null,
+      "table",
+      "Median survival time (Kaplan-Meier S(t)=0.5) as a single row; inf if the curve never reaches 0.5.",
+      null,
+      {
+        "vgi.category": "estimation",
+        "vgi.doc_llm": "Compute the median survival time from a cohort relation: the time at which the Kaplan-Meier survival function S(t) first drops to 0.5. Pass the cohort as `(SELECT ...)` and name the `duration` and `event` (0/1; 1 = event occurred) columns. Returns a single row with one `median_survival` value. When the survival curve never reaches 0.5 (e.g. under heavy censoring) the result is `inf`, not NULL. Use it when you want a single headline number summarizing a cohort's survival rather than the whole curve.",
+        "vgi.doc_md": "# median_survival\n\nThe **median survival time**: where the Kaplan-Meier curve S(t) first reaches 0.5.\n\n## Usage\n\nPass your cohort as the first argument \u2014 a parenthesised subquery projecting the follow-up time and 0/1 event columns \u2014 and name the `duration := 't'` and `event := 'e'` roles. The result is a single row. A ready-to-run example is attached to this function.\n\n## Returns\n\nExactly one row with the single `median_survival` value.\n\n## Notes\n\nIf S(t) never reaches 0.5 the value is `inf` (median undefined), passed through as a float rather than NULL. Event coding is `1` = event, `0` = right-censored.",
+        "vgi.example_queries": "[{\"description\": \"Median survival time for a small cohort\", \"sql\": \"SELECT median_survival FROM survival.main.median_survival((SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), duration := 't', event := 'e')\"}]",
+        "vgi.keywords": "[\"median survival\", \"median survival time\", \"median\", \"kaplan-meier\", \"S(t)=0.5\", \"half life\", \"headline metric\", \"time-to-event\", \"censoring\"]",
+        "vgi.result_columns_schema": "[{\"name\": \"median_survival\", \"type\": \"DOUBLE\", \"description\": \"Median survival time (where S(t)=0.5); inf if never reached.\"}]",
+        "vgi.title": "Median Survival Time"
+      },
+      null,
+      [
+        "data",
+        "event",
+        "duration"
+      ],
+      [
+        "TABLE",
+        "VARCHAR",
+        "VARCHAR"
+      ],
+      null,
+      null,
+      null,
+      true,
+      null,
+      22599,
+      [
+        "SELECT median_survival FROM survival.main.median_survival((SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), duration := 't', event := 'e')"
+      ],
+      null,
+      [
+        "survival",
+        "estimator"
+      ]
+    ]
+  ]
+}

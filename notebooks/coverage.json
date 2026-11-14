@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "catalogs": {
+    "released": {
+      "path": "coverage/catalog-release.json",
+      "sha256": "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3",
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:00:08.373623+00:00",
+        "catalog_sha256": "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3",
+        "notes": "Complete actual publicv0.4.0 catalog: four whole-relation table functions and one methods view. No auth/writes or omitted objects."
+      }
+    },
+    "current": {
+      "path": "coverage/catalog-current.json",
+      "sha256": "9da2618c5dc34724675f09f34aea30dfb0f5b44b91fb8a573dc751ccee62e1a7",
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:00:08.373623+00:00",
+        "catalog_sha256": "9da2618c5dc34724675f09f34aea30dfb0f5b44b91fb8a573dc751ccee62e1a7",
+        "notes": "Allfive current registrations and schemas reviewed against release; full estimation/buffering/dependency diff changes only examples/metadata. Current0e92f43 not executed."
+      }
+    }
+  },
+  "notebooks": [
+    {
+      "path": "01_censoring_risk_sets_and_median.ipynb",
+      "sha256": "a37095efe2733ead20ba118a70fad98c78b60eb7a5f17b7460cd7413693e0467",
+      "execution": {
+        "path": "coverage/run-01.json",
+        "sha256": "8748f0a0c0f4006cbb30692de0bc4e6d8009d48ac2f46db2d290d9e781f487e8"
+      }
+    },
+    {
+      "path": "02_hazard_ratios_need_a_unit.ipynb",
+      "sha256": "d382e5376a94ff6cd2d6737328e304aae743d893ae97e055b563bfa25d06462c",
+      "execution": {
+        "path": "coverage/run-02.json",
+        "sha256": "c175a19f495d9c29c92db260cb3eaf21a1a76ce6dd85d84b361cf1dc92447f6c"
+      }
+    }
+  ],
+  "examples": [
+    {
+      "object": {
+        "schema": "main",
+        "name": "kaplan_meier"
+      },
+      "notebook": "01_censoring_risk_sets_and_median.ipynb",
+      "sql": [
+        {
+          "cell": "820f8749",
+          "reference": "survival.main.kaplan_meier"
+        }
+      ],
+      "narrative_cells": [
+        "6366a7a9",
+        "31a842e7",
+        "a557a03c"
+      ],
+      "result_cells": [
+        "a0fc36ad",
+        "4f5cfbcf",
+        "da83d351"
+      ],
+      "interpretation_cells": [
+        "3f04bf77",
+        "135be667"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:00:08.373623+00:00",
+        "notebook_sha256": "a37095efe2733ead20ba118a70fad98c78b60eb7a5f17b7460cd7413693e0467",
+        "catalog_sha256": [
+          "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3",
+          "9da2618c5dc34724675f09f34aea30dfb0f5b44b91fb8a573dc751ccee62e1a7"
+        ],
+        "purpose": "Reconcile estimated survival and risk sets with visibleSQL arithmetic and inspect an earlier observation cutoff.",
+        "finding": "The full product-limit series, confidence-bound ordering, counts and risk sets pass twelveSQL checks. Shortening cutoff16\u21928 retains events/risk sets throughday8 while censoring later records; no later estimate or real-device inference is made."
+      }
+    },
+    {
+      "object": {
+        "schema": "main",
+        "name": "median_survival"
+      },
+      "notebook": "01_censoring_risk_sets_and_median.ipynb",
+      "sql": [
+        {
+          "cell": "820f8749",
+          "reference": "survival.main.median_survival"
+        }
+      ],
+      "narrative_cells": [
+        "6366a7a9",
+        "b835f07e"
+      ],
+      "result_cells": [
+        "a0fc36ad",
+        "da83d351"
+      ],
+      "interpretation_cells": [
+        "3f04bf77",
+        "135be667"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:00:08.373623+00:00",
+        "notebook_sha256": "a37095efe2733ead20ba118a70fad98c78b60eb7a5f17b7460cd7413693e0467",
+        "catalog_sha256": [
+          "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3",
+          "9da2618c5dc34724675f09f34aea30dfb0f5b44b91fb8a573dc751ccee62e1a7"
+        ],
+        "purpose": "Interpret median time as the first half-survival crossing, including unreached medians.",
+        "finding": "Returned median matches an independently selected earliestKM crossing; finite default becomesinf atcutoff8 and prose explicitly distinguishes unreached from infinite lifetime."
+      }
+    },
+    {
+      "object": {
+        "schema": "main",
+        "name": "methods"
+      },
+      "notebook": "02_hazard_ratios_need_a_unit.ipynb",
+      "sql": [
+        {
+          "cell": "methods",
+          "reference": "survival.main.methods"
+        }
+      ],
+      "narrative_cells": [
+        "methods-story"
+      ],
+      "result_cells": [
+        "methods"
+      ],
+      "interpretation_cells": [
+        "methods-story",
+        "group-story",
+        "cox-story"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:00:08.373623+00:00",
+        "notebook_sha256": "d382e5376a94ff6cd2d6737328e304aae743d893ae97e055b563bfa25d06462c",
+        "catalog_sha256": [
+          "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3",
+          "9da2618c5dc34724675f09f34aea30dfb0f5b44b91fb8a573dc751ccee62e1a7"
+        ],
+        "purpose": "Choose curve estimation, group comparison and continuous regression through the actual native method directory.",
+        "finding": "Four actual method descriptions are used to select each analysis. Subsequent visible calls show why logrankp is not an effect size and why a Cox ratio needs its covariate increment; the directory is used as methodological navigation."
+      }
+    },
+    {
+      "object": {
+        "schema": "main",
+        "name": "logrank_test"
+      },
+      "notebook": "02_hazard_ratios_need_a_unit.ipynb",
+      "sql": [
+        {
+          "cell": "group-fits",
+          "reference": "survival.main.logrank_test"
+        }
+      ],
+      "narrative_cells": [
+        "group-story"
+      ],
+      "result_cells": [
+        "group-results",
+        "check-results"
+      ],
+      "interpretation_cells": [
+        "group-results",
+        "experiment"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:00:08.373623+00:00",
+        "notebook_sha256": "d382e5376a94ff6cd2d6737328e304aae743d893ae97e055b563bfa25d06462c",
+        "catalog_sha256": [
+          "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3",
+          "9da2618c5dc34724675f09f34aea30dfb0f5b44b91fb8a573dc751ccee62e1a7"
+        ],
+        "purpose": "Compare fixed low/highload groups while keeping the complete observations and censoring visible.",
+        "finding": "One two-group result has onedegreeoffreedom and validstatistic/pvalue. Both groupcurves andlogrankresult stay fixed in the unit experiment; no causal, effect-size or model-diagnostic interpretation is claimed."
+      }
+    },
+    {
+      "object": {
+        "schema": "main",
+        "name": "cox_hazard_ratios"
+      },
+      "notebook": "02_hazard_ratios_need_a_unit.ipynb",
+      "sql": [
+        {
+          "cell": "cox-fits",
+          "reference": "survival.main.cox_hazard_ratios"
+        }
+      ],
+      "narrative_cells": [
+        "cox-story",
+        "checks-story"
+      ],
+      "result_cells": [
+        "cox-results",
+        "check-results"
+      ],
+      "interpretation_cells": [
+        "cox-results",
+        "experiment"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:00:08.373623+00:00",
+        "notebook_sha256": "d382e5376a94ff6cd2d6737328e304aae743d893ae97e055b563bfa25d06462c",
+        "catalog_sha256": [
+          "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3",
+          "9da2618c5dc34724675f09f34aea30dfb0f5b44b91fb8a573dc751ccee62e1a7"
+        ],
+        "purpose": "Fit one intended numeric covariate and distinguish fittedrelationship from its reporting units.",
+        "finding": "A5-point versus10-pointunit halvescoef and square-rootsHR/intervalendpoints. SQL converts allthree quantities to the fixed10-pointfit, preservingtheWaldp and cohort. ThirteenSQL controls pass; allinput/curve/test evidence staysfixed."
+      }
+    }
+  ]
+}

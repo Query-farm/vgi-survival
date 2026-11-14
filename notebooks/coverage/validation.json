@@ -1,0 +1,397 @@
+{
+  "schema_version": 1,
+  "status": "met",
+  "meets_target": true,
+  "catalogs": {
+    "released": {
+      "catalog_status": "verified",
+      "revision": "v0.4.0",
+      "catalog_sha256": "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3",
+      "collection_reconciled": true,
+      "denominator": 5,
+      "observed_objects": 5,
+      "required": 5,
+      "verified_count": 5,
+      "candidate_count": 0,
+      "fraction": 1.0,
+      "meets_target": true,
+      "exact_runtime_count": 5,
+      "runtime_revisions": [
+        "v0.4.0"
+      ],
+      "covered": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "cox_hazard_ratios"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "kaplan_meier"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "logrank_test"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "median_survival"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "methods"
+        }
+      ],
+      "uncovered": [],
+      "objects": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "cox_hazard_ratios",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "cox_hazard_ratios(TABLE, VARCHAR, VARCHAR) -> None"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "kaplan_meier",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "kaplan_meier(TABLE, VARCHAR, VARCHAR) -> None"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "logrank_test",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "logrank_test(TABLE, VARCHAR, VARCHAR, VARCHAR) -> None"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "median_survival",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "median_survival(TABLE, VARCHAR, VARCHAR) -> None"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "methods",
+          "kinds": [
+            "table"
+          ],
+          "signatures": [
+            "VIEW"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        }
+      ],
+      "issues": []
+    },
+    "current": {
+      "catalog_status": "verified",
+      "revision": "0e92f43a22af937eb730ec5df1e0581f139a893f",
+      "catalog_sha256": "9da2618c5dc34724675f09f34aea30dfb0f5b44b91fb8a573dc751ccee62e1a7",
+      "collection_reconciled": false,
+      "denominator": 5,
+      "observed_objects": 5,
+      "required": 5,
+      "verified_count": 5,
+      "candidate_count": 0,
+      "fraction": 1.0,
+      "meets_target": true,
+      "exact_runtime_count": 0,
+      "runtime_revisions": [
+        "v0.4.0"
+      ],
+      "covered": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "cox_hazard_ratios"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "kaplan_meier"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "logrank_test"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "median_survival"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "methods"
+        }
+      ],
+      "uncovered": [],
+      "objects": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "cox_hazard_ratios",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "cox_hazard_ratios(TABLE, VARCHAR, VARCHAR) -> None"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "kaplan_meier",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "kaplan_meier(TABLE, VARCHAR, VARCHAR) -> None"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "logrank_test",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "logrank_test(TABLE, VARCHAR, VARCHAR, VARCHAR) -> None"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "median_survival",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "median_survival(TABLE, VARCHAR, VARCHAR) -> None"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "methods",
+          "kinds": [
+            "table"
+          ],
+          "signatures": [
+            "VIEW"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        }
+      ],
+      "issues": []
+    }
+  },
+  "interface_drift": {
+    "known": true,
+    "current_only": [],
+    "released_only": [],
+    "changed": []
+  },
+  "notebooks": {
+    "01_censoring_risk_sets_and_median.ipynb": {
+      "verified": true,
+      "issues": []
+    },
+    "02_hazard_ratios_need_a_unit.ipynb": {
+      "verified": true,
+      "issues": []
+    }
+  },
+  "examples": [
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "kaplan_meier"
+      },
+      "notebook": "01_censoring_risk_sets_and_median.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "median_survival"
+      },
+      "notebook": "01_censoring_risk_sets_and_median.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "methods"
+      },
+      "notebook": "02_hazard_ratios_need_a_unit.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "logrank_test"
+      },
+      "notebook": "02_hazard_ratios_need_a_unit.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "cox_hazard_ratios"
+      },
+      "notebook": "02_hazard_ratios_need_a_unit.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "a9b73d203e35f449d23c5745bebc333304784d5cf16c42206730f9044ea367f3"
+    }
+  ],
+  "issues": []
+}
