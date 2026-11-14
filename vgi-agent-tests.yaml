@@ -21,3 +21,9 @@ tasks:
     reference_sql: "SELECT method FROM survival.main.methods WHERE category = 'regression' ORDER BY method"
     ignore_column_names: true
     unordered: true
+  - name: churn_median_by_plan_with_logrank
+    reference_sql: "WITH subs AS (SELECT * FROM (VALUES (1,1,'monthly'),(2,1,'monthly'),(3,0,'monthly'),(3,1,'monthly'),(5,1,'monthly'),(6,1,'monthly'),(8,0,'monthly'),(9,1,'monthly'),(3,1,'annual'),(6,0,'annual'),(10,1,'annual'),(12,1,'annual'),(12,0,'annual'),(15,1,'annual'),(18,1,'annual'),(24,0,'annual')) AS s(tenure, churned, plan)), medians AS (SELECT 'annual' AS plan, median_survival FROM survival.main.median_survival((SELECT tenure, churned FROM subs WHERE plan = 'annual'), duration := 'tenure', event := 'churned') UNION ALL SELECT 'monthly' AS plan, median_survival FROM survival.main.median_survival((SELECT tenure, churned FROM subs WHERE plan = 'monthly'), duration := 'tenure', event := 'churned')) SELECT m.plan, m.median_survival, lr.p_value FROM medians AS m CROSS JOIN survival.main.logrank_test((SELECT tenure, churned, plan FROM subs), duration := 'tenure', event := 'churned', \"group\" := 'plan') AS lr ORDER BY m.plan"
+    ignore_column_names: true
+  - name: hazard_ratio_and_logrank_for_new_model
+    reference_sql: "WITH units AS (SELECT * FROM (VALUES (120,1,'old'),(200,1,'old'),(250,0,'old'),(310,1,'old'),(400,1,'old'),(450,1,'old'),(500,0,'old'),(180,1,'new'),(350,0,'new'),(420,1,'new'),(600,1,'new'),(650,0,'new'),(700,1,'new'),(800,0,'new')) AS u(hours, failed, model)) SELECT lr.p_value AS logrank_p_value, cx.hazard_ratio FROM survival.main.logrank_test((SELECT hours, failed, model FROM units), duration := 'hours', event := 'failed', \"group\" := 'model') AS lr CROSS JOIN survival.main.cox_hazard_ratios((SELECT hours, failed, (model = 'new')::INTEGER AS is_new FROM units), duration := 'hours', event := 'failed') AS cx"
+    ignore_column_names: true

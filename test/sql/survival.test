@@ -122,5 +122,48 @@ LIMIT 4;
 2.0	0.99
 3.0	0.985
 
+# Composed queries: several buffering table functions in ONE query (the shape of
+# the published composed examples in vgi_survival/examples.py). Two arms that
+# overlap in time so the Cox fit converges.
+statement ok
+CREATE TEMP TABLE trial AS
+SELECT * FROM (VALUES
+  (2,1,'control'),(3,1,'control'),(4,1,'control'),(5,0,'control'),
+  (6,1,'control'),(8,1,'control'),(9,0,'control'),(11,1,'control'),
+  (4,1,'treated'),(7,0,'treated'),(9,1,'treated'),(12,1,'treated'),
+  (14,0,'treated'),(15,1,'treated'),(18,1,'treated'),(20,0,'treated')
+) AS c(t, e, arm);
+
+# log-rank p-value CROSS JOIN the Cox hazard ratio of treated vs control.
+query RRR
+SELECT round(lr.p_value, 4), round(cx.hazard_ratio, 3), round(cx.p_value, 4)
+FROM survival.logrank_test((SELECT t, e, arm FROM trial), duration := 't', event := 'e', "group" := 'arm') AS lr
+CROSS JOIN survival.cox_hazard_ratios((SELECT t, e, (arm = 'treated')::INTEGER AS treated FROM trial),
+                                      duration := 't', event := 'e') AS cx;
+----
+0.0199	0.175	0.0377
+
+# Median survival per arm next to the log-rank p-value (two median calls + one test).
+query RRR
+SELECT mc.median_survival, mt.median_survival, round(lr.p_value, 4)
+FROM survival.median_survival((SELECT t, e FROM trial WHERE arm = 'control'), duration := 't', event := 'e') AS mc
+CROSS JOIN survival.median_survival((SELECT t, e FROM trial WHERE arm = 'treated'), duration := 't', event := 'e') AS mt
+CROSS JOIN survival.logrank_test((SELECT t, e, arm FROM trial), duration := 't', event := 'e', "group" := 'arm') AS lr;
+----
+6.0	15.0	0.0199
+
+# Landmark survival: ASOF join two per-arm KM step curves at t = 6 and t = 12.
+query RRR
+SELECT l.landmark, round(kc.survival, 3), round(kt.survival, 3)
+FROM (VALUES (6.0), (12.0)) AS l(landmark)
+ASOF JOIN survival.kaplan_meier((SELECT t, e FROM trial WHERE arm = 'control'), duration := 't', event := 'e') AS kc
+  ON kc.time <= l.landmark
+ASOF JOIN survival.kaplan_meier((SELECT t, e FROM trial WHERE arm = 'treated'), duration := 't', event := 'e') AS kt
+  ON kt.time <= l.landmark
+ORDER BY l.landmark;
+----
+6.0	0.469	0.875
+12.0	0.0	0.583
+
 statement ok
 DETACH survival;

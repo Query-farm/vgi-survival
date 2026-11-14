@@ -17,6 +17,7 @@ import sys
 from vgi import Worker
 from vgi.catalog import Catalog, Schema, View
 
+from vgi_survival.examples import COMPOSED_EXAMPLES
 from vgi_survival.tables import TABLE_FUNCTIONS
 
 _FUNCTIONS: list[type] = [*TABLE_FUNCTIONS]
@@ -125,6 +126,8 @@ _SCHEMA_EXAMPLE_QUERIES = json.dumps(
                 "duration := 't', event := 'e')"
             ),
         },
+        # Composed: several survival functions combined over one shared cohort CTE.
+        *COMPOSED_EXAMPLES,
     ]
 )
 
@@ -292,7 +295,8 @@ _METHODS_VIEW = View(
 # exactly the columns it asks for; grading compares by VALUE (ignore_column_names)
 # so an aliased/reordered projection still matches the canonical reference_sql, and
 # both queries run the same lifelines estimator on the same inline cohort — so the
-# floats are byte-identical. Together they cover all four functions. VGI416: the
+# floats are byte-identical. Together they cover all four functions; two of them
+# compose functions (median_survival + logrank_test, logrank_test + cox_hazard_ratios). VGI416: the
 # public tag carries only {name, prompt}; the grader-only fields (`reference_sql`,
 # `ignore_column_names`, ...) live in the private `vgi-agent-tests.yaml` sidecar.
 _AGENT_TEST_TASKS = json.dumps(
@@ -332,6 +336,31 @@ _AGENT_TEST_TASKS = json.dumps(
                 "A cohort has a follow-up time column `t` and an event indicator `e` "
                 "(1 = the event occurred, 0 = right-censored), with rows "
                 "(5,1), (8,0), (12,1), (3,1), (9,0). Return the median survival time."
+            ),
+        },
+        {
+            "name": "churn_median_by_plan_with_logrank",
+            "prompt": (
+                "Subscribers have a tenure in months `tenure`, a churn indicator `churned` (1 = churned, "
+                "0 = still subscribed, i.e. censored), and a `plan` ('monthly' or 'annual'), with rows "
+                "(1,1,'monthly'), (2,1,'monthly'), (3,0,'monthly'), (3,1,'monthly'), (5,1,'monthly'), "
+                "(6,1,'monthly'), (8,0,'monthly'), (9,1,'monthly'), (3,1,'annual'), (6,0,'annual'), "
+                "(10,1,'annual'), (12,1,'annual'), (12,0,'annual'), (15,1,'annual'), (18,1,'annual'), "
+                "(24,0,'annual'). Return one row per plan with three columns: the plan name, that plan's "
+                "median survival (tenure) time, and the log-rank test p-value comparing the two plans "
+                "(the same p-value on both rows). Order the rows by plan name ascending."
+            ),
+        },
+        {
+            "name": "hazard_ratio_and_logrank_for_new_model",
+            "prompt": (
+                "Hardware units have run-time `hours`, a failure indicator `failed` (1 = failed, 0 = still "
+                "running, i.e. censored), and a `model` ('old' or 'new'), with rows (120,1,'old'), "
+                "(200,1,'old'), (250,0,'old'), (310,1,'old'), (400,1,'old'), (450,1,'old'), (500,0,'old'), "
+                "(180,1,'new'), (350,0,'new'), (420,1,'new'), (600,1,'new'), (650,0,'new'), (700,1,'new'), "
+                "(800,0,'new'). Return a single row with two columns: the log-rank test p-value comparing "
+                "the two models, and the Cox proportional-hazards hazard ratio for the new model, fitted "
+                "with a single 0/1 covariate that is 1 for 'new' and 0 for 'old'."
             ),
         },
         {

@@ -17,22 +17,36 @@ backed by [lifelines](https://lifelines.readthedocs.io/) (MIT).
 INSTALL vgi FROM community; LOAD vgi;
 ATTACH 'survival' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.4.0 vgi-survival-worker');
 
+-- cohort(t, e, arm, age): follow-up time, event (1 = event, 0 = censored),
+-- treatment arm ('control' / 'treated'), and a numeric covariate
+
 -- Kaplan-Meier survival curve
 SELECT * FROM survival.kaplan_meier((SELECT t, e FROM cohort),
                                     duration := 't', event := 'e')
 ORDER BY time;
 
 -- Cox proportional-hazards: one hazard ratio per covariate column
-SELECT * FROM survival.cox_hazard_ratios((SELECT * FROM cohort),
+-- (every column besides duration/event is a covariate, so select only numeric ones)
+SELECT * FROM survival.cox_hazard_ratios((SELECT t, e, age FROM cohort),
                                          duration := 't', event := 'e');
 
 -- Log-rank test comparing arms ("group" is double-quoted: it's a SQL keyword)
-SELECT * FROM survival.logrank_test((SELECT * FROM cohort),
+SELECT * FROM survival.logrank_test((SELECT t, e, arm FROM cohort),
                                     duration := 't', event := 'e', "group" := 'arm');
 
 -- Median survival time
 SELECT * FROM survival.median_survival((SELECT t, e FROM cohort),
                                        duration := 't', event := 'e');
+
+-- Combine them: each arm's median survival next to the log-rank p-value
+SELECT mc.median_survival AS median_control, mt.median_survival AS median_treated,
+       lr.p_value AS logrank_p_value
+FROM survival.median_survival((SELECT t, e FROM cohort WHERE arm = 'control'),
+                              duration := 't', event := 'e') AS mc
+CROSS JOIN survival.median_survival((SELECT t, e FROM cohort WHERE arm = 'treated'),
+                                    duration := 't', event := 'e') AS mt
+CROSS JOIN survival.logrank_test((SELECT t, e, arm FROM cohort),
+                                 duration := 't', event := 'e', "group" := 'arm') AS lr;
 ```
 
 ## Quick start

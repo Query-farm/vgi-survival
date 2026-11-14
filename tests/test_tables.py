@@ -7,6 +7,7 @@ that the named column-role args resolve columns in the input relation.
 
 from __future__ import annotations
 
+import json
 import math
 
 import pyarrow as pa
@@ -141,3 +142,24 @@ class TestCursorSurvivesContinuation:
                 serialize_state=True,
                 tick_guard=200,
             )
+
+
+def test_composed_examples_are_published_where_agents_see_them() -> None:
+    """Each composed example sits in the schema list and in its driving function's first five."""
+    from vgi_survival import examples as ex
+    from vgi_survival.worker import _SCHEMA_EXAMPLE_QUERIES
+
+    schema_sqls = [e["sql"] for e in json.loads(_SCHEMA_EXAMPLE_QUERIES)]
+    drivers = {
+        ex.LANDMARK_SURVIVAL_EXAMPLE["sql"]: KaplanMeier,
+        ex.TRIAL_SUMMARY_EXAMPLE["sql"]: LogRankTest,
+        ex.MEDIAN_BY_ARM_EXAMPLE["sql"]: MedianSurvival,
+    }
+    for sql, fn in drivers.items():
+        assert sql in schema_sqls
+        tag_sqls = [e["sql"] for e in json.loads(fn.Meta.tags["vgi.example_queries"])]
+        assert sql in tag_sqls[:5]
+        assert sql in [e.sql for e in fn.Meta.examples][:5]
+    for fn in (KaplanMeier, CoxHazardRatios, LogRankTest, MedianSurvival):
+        tag = json.loads(fn.Meta.tags["vgi.example_queries"])
+        assert [(e["sql"], e["description"]) for e in tag] == [(e.sql, e.description) for e in fn.Meta.examples]

@@ -22,6 +22,7 @@ vgi_survival/
   buffering.py         SinkBuffer (single-bucket sink/combine) + Arrow<->pandas plumbing
   tables.py            the four TableBufferingFunction wrappers + output schemas + arg classes
   schema_utils.py      pa.Field comment / column-doc helper
+  examples.py          composed example queries (several functions in one query), defined once
   worker.py            assembles the catalog; main() / main_http()
 tests/                 pytest: test_survival (pure), test_tables (in-proc harness), test_client (Client RPC)
 test/sql/*.test        haybarn-unittest sqllogictest — authoritative E2E

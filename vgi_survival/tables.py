@@ -25,13 +25,20 @@ from typing import Annotated, ClassVar
 import pyarrow as pa
 from vgi.arguments import Arg, TableInput
 from vgi.invocation import BindResponse
-from vgi.metadata import FunctionExample
 from vgi.table_buffering_function import TableBufferingParams
 from vgi.table_function import BindParams
 from vgi_rpc.rpc import OutputCollector
 
 from . import survival
 from .buffering import DrainState, SinkBuffer
+from .examples import (
+    LANDMARK_SURVIVAL_EXAMPLE,
+    LANDMARK_SURVIVAL_EXPECTED,
+    MEDIAN_BY_ARM_EXAMPLE,
+    MEDIAN_BY_ARM_EXPECTED,
+    TRIAL_SUMMARY_EXAMPLE,
+    function_examples,
+)
 from .schema_utils import field as sfield
 
 
@@ -89,6 +96,65 @@ _MEDIAN_SCHEMA = pa.schema(
         ),
     ]
 )
+
+
+# ---------------------------------------------------------------------------
+# Per-function example lists: each feeds both the function's
+# ``vgi.example_queries`` tag and its ``Meta.examples`` (defined once). The
+# single-function example comes first, then the composed examples this function
+# drives (see ``examples.py``); keep each list within 5 entries, since agents are
+# only shown the first five examples per object.
+# ---------------------------------------------------------------------------
+
+_KM_EXAMPLES: list[dict[str, str]] = [
+    {
+        "description": "Kaplan-Meier survival curve projected to the survival probability and at-risk count",
+        "sql": (
+            "SELECT time, survival, at_risk FROM survival.main.kaplan_meier("
+            "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
+            "duration := 't', event := 'e') ORDER BY time"
+        ),
+    },
+    LANDMARK_SURVIVAL_EXAMPLE,
+]
+
+_COX_EXAMPLES: list[dict[str, str]] = [
+    {
+        "description": "Cox hazard ratio and Wald p-value for each covariate",
+        "sql": (
+            "SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios("
+            "(SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),"
+            "(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate"
+        ),
+    },
+    TRIAL_SUMMARY_EXAMPLE,
+]
+
+_LOGRANK_EXAMPLES: list[dict[str, str]] = [
+    {
+        "description": "Log-rank statistic and p-value comparing two treatment arms",
+        "sql": (
+            "SELECT test_statistic, p_value, degrees_freedom FROM survival.main.logrank_test("
+            "(SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),"
+            "(6,1,'b')) AS c(t, e, arm)), "
+            "duration := 't', event := 'e', \"group\" := 'arm')"
+        ),
+    },
+    TRIAL_SUMMARY_EXAMPLE,
+    MEDIAN_BY_ARM_EXAMPLE,
+]
+
+_MEDIAN_EXAMPLES: list[dict[str, str]] = [
+    {
+        "description": "Median survival time for a small cohort",
+        "sql": (
+            "SELECT median_survival FROM survival.main.median_survival("
+            "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
+            "duration := 't', event := 'e')"
+        ),
+    },
+    MEDIAN_BY_ARM_EXAMPLE,
+]
 
 
 # ---------------------------------------------------------------------------
@@ -227,20 +293,7 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
                     },
                 ]
             ),
-            "vgi.example_queries": json.dumps(
-                [
-                    {
-                        "description": (
-                            "Kaplan-Meier survival curve projected to the survival probability and at-risk count"
-                        ),
-                        "sql": (
-                            "SELECT time, survival, at_risk FROM survival.main.kaplan_meier("
-                            "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
-                            "duration := 't', event := 'e') ORDER BY time"
-                        ),
-                    }
-                ]
-            ),
+            "vgi.example_queries": json.dumps(_KM_EXAMPLES),
             "vgi.executable_examples": json.dumps(
                 [
                     {
@@ -254,20 +307,12 @@ class KaplanMeier(SinkBuffer[KaplanMeierArgs, DrainState]):
                             "duration := 't', event := 'e') WHERE time = 3"
                         ),
                         "expected_result": [{"time": 3.0, "survival": 0.8, "at_risk": 5}],
-                    }
+                    },
+                    {**LANDMARK_SURVIVAL_EXAMPLE, "expected_result": LANDMARK_SURVIVAL_EXPECTED},
                 ]
             ),
         }
-        examples = [
-            FunctionExample(
-                sql=(
-                    "SELECT time, survival, at_risk FROM survival.main.kaplan_meier("
-                    "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
-                    "duration := 't', event := 'e') ORDER BY time"
-                ),
-                description="Kaplan-Meier survival curve projected to the survival probability and at-risk count",
-            )
-        ]
+        examples = function_examples(_KM_EXAMPLES)
 
     @classmethod
     def on_bind(cls, params: BindParams[KaplanMeierArgs]) -> BindResponse:
@@ -400,29 +445,9 @@ class CoxHazardRatios(SinkBuffer[CoxArgs, DrainState]):
                     {"name": "p_value", "type": "DOUBLE", "description": "Wald-test p-value for the coefficient."},
                 ]
             ),
-            "vgi.example_queries": json.dumps(
-                [
-                    {
-                        "description": "Cox hazard ratio and Wald p-value for each covariate",
-                        "sql": (
-                            "SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios("
-                            "(SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),"
-                            "(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate"
-                        ),
-                    }
-                ]
-            ),
+            "vgi.example_queries": json.dumps(_COX_EXAMPLES),
         }
-        examples = [
-            FunctionExample(
-                sql=(
-                    "SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios("
-                    "(SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),"
-                    "(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate"
-                ),
-                description="Cox hazard ratio and Wald p-value for each covariate",
-            )
-        ]
+        examples = function_examples(_COX_EXAMPLES)
 
     @classmethod
     def on_bind(cls, params: BindParams[CoxArgs]) -> BindResponse:
@@ -544,31 +569,9 @@ class LogRankTest(SinkBuffer[LogRankArgs, DrainState]):
                     },
                 ]
             ),
-            "vgi.example_queries": json.dumps(
-                [
-                    {
-                        "description": "Log-rank statistic and p-value comparing two treatment arms",
-                        "sql": (
-                            "SELECT test_statistic, p_value, degrees_freedom FROM survival.main.logrank_test("
-                            "(SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),"
-                            "(6,1,'b')) AS c(t, e, arm)), "
-                            "duration := 't', event := 'e', \"group\" := 'arm')"
-                        ),
-                    }
-                ]
-            ),
+            "vgi.example_queries": json.dumps(_LOGRANK_EXAMPLES),
         }
-        examples = [
-            FunctionExample(
-                sql=(
-                    "SELECT test_statistic, p_value, degrees_freedom FROM survival.main.logrank_test("
-                    "(SELECT * FROM (VALUES (5,1,'a'),(8,0,'a'),(12,1,'b'),(3,1,'b'),(9,0,'a'),"
-                    "(6,1,'b')) AS c(t, e, arm)), "
-                    "duration := 't', event := 'e', \"group\" := 'arm')"
-                ),
-                description="Log-rank statistic and p-value comparing two treatment arms",
-            )
-        ]
+        examples = function_examples(_LOGRANK_EXAMPLES)
 
     @classmethod
     def on_bind(cls, params: BindParams[LogRankArgs]) -> BindResponse:
@@ -679,29 +682,12 @@ class MedianSurvival(SinkBuffer[MedianArgs, DrainState]):
                     },
                 ]
             ),
-            "vgi.example_queries": json.dumps(
-                [
-                    {
-                        "description": "Median survival time for a small cohort",
-                        "sql": (
-                            "SELECT median_survival FROM survival.main.median_survival("
-                            "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
-                            "duration := 't', event := 'e')"
-                        ),
-                    }
-                ]
+            "vgi.example_queries": json.dumps(_MEDIAN_EXAMPLES),
+            "vgi.executable_examples": json.dumps(
+                [{**MEDIAN_BY_ARM_EXAMPLE, "expected_result": MEDIAN_BY_ARM_EXPECTED}]
             ),
         }
-        examples = [
-            FunctionExample(
-                sql=(
-                    "SELECT median_survival FROM survival.main.median_survival("
-                    "(SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), "
-                    "duration := 't', event := 'e')"
-                ),
-                description="Median survival time for a small cohort",
-            )
-        ]
+        examples = function_examples(_MEDIAN_EXAMPLES)
 
     @classmethod
     def on_bind(cls, params: BindParams[MedianArgs]) -> BindResponse:
