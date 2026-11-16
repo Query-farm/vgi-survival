@@ -1,29 +1,26 @@
-# CI: the vgi-survival worker integration suite
+# CI: the vgi-survival SQL suite
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs the unit tests
-and this repo's sqllogictest suite (`test/sql/*.test`) against the vgi-survival
-VGI worker through the **real DuckDB `vgi` extension** on every push / PR.
+[`run-integration.sh`](run-integration.sh), adapted from the vgi-starter template,
+runs `test/sql/*.test` through the published `haybarn-unittest` sqllogictest runner
+with the signed community `vgi` extension (no C++ build), over one transport:
 
-## How it works (no C++ build)
+| `TRANSPORT` | `VGI_SURVIVAL_WORKER` (the ATTACH LOCATION) | How DuckDB reaches the worker |
+|-------------|-------------------------------|-------------------------------|
+| `stdio`     | `$WORKER`                     | spawns it per connection, Arrow IPC over stdin/stdout |
+| `launch`    | `launch:$WORKER`              | starts it once on an AF_UNIX socket and pools connections |
+| `http`      | `http://127.0.0.1:<port>`     | the script starts `$WORKER --http --port 0` and reads `PORT:<n>` |
 
-CI drives a **prebuilt** standalone `haybarn-unittest` and installs the
-**signed** `vgi` extension from the Haybarn community channel:
+`WORKER` is an executable path: the project venv's `vgi-survival` console script. The
+script rewrites `require <ext>` into a `LOAD` (the runner links no extensions),
+adds `LOAD httpfs` for the http leg, installs the extensions once, and fails on
+any unexpected skip (`EXPECTED_SKIP_REASONS`) or if fewer than `MIN_EXECUTED`
+test files ran: the runner otherwise turns errors mentioning "HTTP" into silent
+skips and exits 0 when nothing matched.
 
-1. **Install the worker** — `uv sync --frozen` installs the package and its
-   `vgi-survival` console script into the venv; the .test files ATTACH it via
-   `.venv/bin/vgi-survival`.
-2. **Download the runner** — the matching `haybarn_unittest-*` asset per platform.
-3. **Preprocess** — [`preprocess-require.awk`](preprocess-require.awk) injects a
-   signed `INSTALL vgi FROM community;` before each bare `LOAD vgi;`.
-4. **Run** — [`run-integration.sh`](run-integration.sh) stages the preprocessed
-   tree, points `VGI_SURVIVAL_WORKER` at the console script, warms the extension
-   cache, then runs the suite.
-
-## Run it locally
+CI (`.github/workflows/ci.yml`, job `integration`) runs it as a
+`transport: [stdio, launch, http]` matrix. Locally:
 
 ```bash
-uv sync --python 3.13
-HAYBARN_UNITTEST=/path/to/haybarn-unittest \
-VGI_SURVIVAL_WORKER="$PWD/.venv/bin/vgi-survival" \
-  ci/run-integration.sh
+make test-sql                      # all three transports
+make test-sql TRANSPORTS=launch    # one
 ```
