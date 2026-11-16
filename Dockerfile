@@ -6,7 +6,7 @@
 # See docker-entrypoint.sh. Survival analysis runs locally via lifelines (MIT); no
 # credentials, network, or secrets are needed at query time.
 # syntax=docker/dockerfile:1
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 ARG VERSION=0.0.0
 ARG GIT_COMMIT=unknown
