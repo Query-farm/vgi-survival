@@ -15,7 +15,7 @@ backed by [lifelines](https://lifelines.readthedocs.io/) (MIT).
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'survival' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.4.1 vgi-survival-worker');
+ATTACH 'survival' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.5.0 vgi-survival-worker');
 
 -- cohort(t, e, arm, age): follow-up time, event (1 = event, 0 = censored),
 -- treatment arm ('control' / 'treated'), and a numeric covariate
@@ -49,6 +49,8 @@ CROSS JOIN survival.logrank_test((SELECT t, e, arm FROM cohort),
                                  duration := 't', event := 'e', "group" := 'arm') AS lr;
 ```
 
+vgi-survival 0.5.0 speaks VGI protocol 3.4, so it needs Haybarn 2.0.1 or newer (Haybarn 2.0.0 loads a 3.3 `vgi` extension that cannot attach it).
+
 ## Quick start
 
 The worker isn't on PyPI; [uv](https://docs.astral.sh/uv/) runs it straight from a tagged release on GitHub. `uvx` builds an isolated environment on the first ATTACH and reuses it afterwards:
@@ -57,7 +59,7 @@ The worker isn't on PyPI; [uv](https://docs.astral.sh/uv/) runs it straight from
 INSTALL vgi FROM community;
 LOAD vgi;
 
-ATTACH 'survival' AS survival (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.4.1 vgi-survival-worker');
+ATTACH 'survival' AS survival (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-survival@v0.5.0 vgi-survival-worker');
 
 -- Kaplan-Meier survival curve for a small cohort, projected and ordered by time
 SELECT time, survival, at_risk FROM survival.main.kaplan_meier((SELECT * FROM (VALUES (5,1),(8,0),(12,1),(3,1),(9,0)) AS c(t, e)), duration := 't', event := 'e') ORDER BY time;
@@ -66,14 +68,14 @@ SELECT time, survival, at_risk FROM survival.main.kaplan_meier((SELECT * FROM (V
 SELECT covariate, hazard_ratio, p_value FROM survival.main.cox_hazard_ratios((SELECT * FROM (VALUES (5,1,1.0),(8,0,0.0),(12,1,2.0),(3,1,3.0),(9,0,0.0),(6,1,1.0)) AS c(t, e, prio)), duration := 't', event := 'e') ORDER BY covariate;
 ```
 
-Change `@v0.4.1` to move to a newer release.
+Change `@v0.5.0` to move to a newer release.
 
 ### Other ways to run it
 
 - **Docker** (the image bundles the worker and its dependencies):
 
   ```sql
-  ATTACH 'survival' AS survival (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-survival:0.4.1');
+  ATTACH 'survival' AS survival (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-survival:0.5.0');
   ```
 
 - **From a local checkout** (`git clone https://github.com/Query-farm/vgi-survival`), point `LOCATION` at `uv run --project /path/to/vgi-survival vgi-survival-worker`.
